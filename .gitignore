@@ -134,3 +134,14 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+#Claude
+.claude/
+CLAUDE.md
+
+# Derived from the course modules by scripts/build-course-data.mjs
+src/data/generated/
+public/search/
+public/sitemap.xml
+public/robots.txt
+public/CNAME

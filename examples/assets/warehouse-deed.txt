@@ -1,0 +1,14 @@
+TITLE DEED SUMMARY (fictional, for the Learn RWA course)
+
+Property:     Harbor Warehouse, Unit 7, 12 Quay Road, Port Example
+Parcel ID:    PX-2291-0007
+Area:         1,850 m2 (warehouse and yard)
+Registered owner:
+              Harbor Bond SPV Ltd. (a special purpose vehicle)
+Encumbrance:  First-ranking pledge in favour of the holders of the
+              Harbor Bond 2030 (HBOND), 5% fixed coupon, maturing 2030-06-30.
+Valuation:    1,150,000 USD (independent valuer, 2026-06-30)
+
+This document is the off-ledger legal record. The URIToken that represents it
+carries the SHA-256 digest of this exact file: change one character and the
+digest no longer matches.

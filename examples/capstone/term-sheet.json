@@ -1,0 +1,17 @@
+{
+  "name": "Harbor Bond 2030",
+  "legalName": "Harbor Bond SPV Ltd.",
+  "token": "HARBOR30",
+  "domain": "harbor-bond.example",
+  "faceValueUSD": 100,
+  "couponRatePercent": 5,
+  "couponsPerYear": 4,
+  "supply": 10000,
+  "maturity": "2030-06-30",
+  "navUSD": "100.37",
+  "investors": {
+    "alice": { "usd": 20000, "subscribeUSD": 15000 },
+    "bob": { "usd": 20000, "subscribeUSD": 8000 },
+    "dave": { "usd": 20000, "subscribeUSD": 5000 }
+  }
+}

@@ -1,0 +1,6 @@
+node_modules/
+.env
+.env.bak
+snapshot.json
+capstone/accounts.json
+verify/last-run.log

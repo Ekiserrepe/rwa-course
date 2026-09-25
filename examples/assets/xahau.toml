@@ -1,0 +1,28 @@
+# Served at https://harbor-bond.example/.well-known/xahau.toml
+# (content type application/toml, header Access-Control-Allow-Origin: *)
+# Format: https://xahau.network/docs/infrastructure/identity/
+
+[METADATA]
+modified = 2026-09-21T00:00:00.000Z
+expires = 2027-09-21T00:00:00.000Z
+
+[ORGANIZATION]
+name = "Harbor Bond SPV Ltd."
+website = "https://harbor-bond.example"
+
+[[ACCOUNTS]]
+address = "rIssuerAddressGoesHere"
+network = "21337"
+desc = "Issuer of HBOND (cold, multisig)"
+
+[[ACCOUNTS]]
+address = "rTreasuryAddressGoesHere"
+network = "21337"
+desc = "Treasury: sales, coupons, redemption"
+
+[[CURRENCIES]]
+code = "48424F4E44000000000000000000000000000000"
+issuer = "rIssuerAddressGoesHere"
+symbol = "HBOND"
+network = "21337"
+display_decimals = 2

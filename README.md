@@ -8,8 +8,7 @@ compliance Hooks, ending with a tokenized bond run from term sheet to maturity.
 
 **Read it at [learn.xahau.network/rwa-course](https://learn.xahau.network/rwa-course/).**
 
-Built on the design and app of [Learn Xahau](https://github.com/INFTF/xahau-course) and
-Learn URITokens, so the three read as one family. The Xahau courses are listed at
+The Xahau courses are listed at
 [xahau.network/learn](https://xahau.network/learn/).
 
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -54,38 +53,6 @@ Run the scripts in lesson order: each one's header lists the scripts that must r
 before it. They all read and write `examples/.env`, whichever folder you run them from.
 See [`examples/README.md`](examples/README.md) for the full list.
 
-### Checking the course still works
-
-```sh
-cd examples
-npm run verify     # 6 fresh testnet accounts, runs every script, checks each result (~25 min)
-```
-
-`verify/run-all.mjs` runs all 95 checks in lesson order and checks each output against
-what its lesson says (for example: CAROL's order is refused with `tecNO_AUTH`, the
-coupon rerun pays nobody, the holding-cap Hook freezes the receiver). The exit code is
-the number of failed checks; the log goes to `verify/last-run.log`. A weekly GitHub
-Action runs it too.
-
-## Xahau specifics worth knowing
-
-Behaviour that tutorials and docs don't make obvious, each covered in its lesson:
-
-- **`asfAllowTrustLineClawback` is 17 on Xahau, not 16.** 16 is `asfDisallowIncomingRemit`: code copied from XRP Ledger tutorials sets the wrong flag without any error.
-- **RequireAuth and clawback must be set before any trust line to the issuer exists**, even one holding nothing (`tecOWNERS`, even with `OwnerCount` 0). A line only disappears once it is back to its defaults: limit 0 *and* `tfSetNoRipple`. Clawback also can't be enabled after NoFreeze.
-- **NoFreeze doesn't disable global freeze, it makes it permanent**: the issuer can still turn it on, but never off again.
-- **A token whose issuer has clawback can't be escrowed** (`tecNO_PERMISSION`). For lock-ups, deliver late, freeze until a date, or hold the tokens in a vault account whose Hook releases them on time while clawback still reaches them (Module 9).
-- **An issuer's Hook can't veto transfers between holders**: it is only a weak stakeholder, not asked at all, or (with a collect call) run afterwards with its rollback ignored. A Hook on an account the issuer runs is a strong stakeholder and can refuse.
-- A regular freeze stops a holder sending but **not receiving**; a deep freeze stops both. In every freeze the holder can still pay the issuer, and the issuer can still pay them.
-- An unapproved account (RequireAuth) can't even place a resting DEX order: `tecNO_AUTH`.
-- **Redeem through the DEX, not with two payments**: tokens back and principal out as separate transactions aren't atomic, and a short treasury leaves the holder with nothing (`tecPATH_PARTIAL`).
-- With a **`TransferRate`**, a payment between two holders without a `SendMax` fails with `tecPATH_PARTIAL`; on the DEX the seller pays the fee.
-- An issuer Hook needs **`OfferCreate` in `HookOn`** as well as `Payment`, or it never runs on DEX trades of its token.
-- **When a transaction fails, everything its Hooks emitted is discarded**: a Hook that answered "accepted" delivers nothing if the payment itself fails.
-- Building Hooks in C: `etxn_details` needs a buffer of at least **116 bytes** (138 with a callback), hook-cleaner keeps only `hook()`, so helpers must be inlined, and `-mcpu=mvp` keeps newer WebAssembly features the Hooks VM rejects out of the build.
-- Selling a URIToken for an IOU creates the seller's trust line for that IOU automatically.
-- `get_aggregate_price` and `OracleSet` work on Xahau; `LastUpdateTime` is Unix time, not ledger time.
-
 ## Development
 
 ```sh
@@ -104,26 +71,6 @@ the sitemap and the `/examples` snapshot. Never edit `src/data/generated/` by ha
 The site is English-only for now. The i18n plumbing is intact: add a locale in
 `src/data/locales.js`, its labels in `src/data/i18n.js` and the translated
 strings next to each `en` key, and the language picker appears on its own.
-
-## Deployment
-
-The site is published at [learn.xahau.network/rwa-course](https://learn.xahau.network/rwa-course/).
-That address lives in one place, `SITE_URL` in `site.config.js`; the canonical and
-social links, `robots.txt`, `sitemap.xml` and Vite's `base` (here `/rwa-course/`) are
-all derived from it at build time. To move the course, change that line, or set a
-`SITE_URL` repository variable, which the deploy workflow passes to the build.
-
-The course lives on a sub-path of `learn.xahau.network`, so this repository doesn't
-own the domain and the build writes no `CNAME`: the domain is attached to whichever
-GitHub Pages site serves its root, and project sites like this one appear under it
-at `/<repository name>`. If the course ever moves to a domain of its own, at the root,
-the build writes the `CNAME` for it automatically.
-
-To publish: set **Settings → Pages → Source** to *GitHub Actions* and run the
-*Deploy to GitHub Pages* workflow. It is manual-trigger only; uncomment its `push`
-trigger to deploy on every push to `main`. The *CI* workflow lints, tests and builds
-every push, and *Verify examples on testnet* runs the whole course against testnet
-every Monday.
 
 ## Adding a module
 

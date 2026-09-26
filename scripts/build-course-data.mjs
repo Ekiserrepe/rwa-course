@@ -7,7 +7,7 @@
  *                                   time someone opens search
  *   public/sitemap.xml              one entry per lesson deep link
  *   public/robots.txt               points crawlers at the sitemap
- *   public/CNAME                    the custom domain, for GitHub Pages
+ *   public/CNAME                    the custom domain, when the site owns one
  *
  * Why: courses.js used to import all twelve modules statically, so every
  * visitor downloaded the entire curriculum (~3.1 MB of JS) before the index
@@ -158,9 +158,13 @@ await writeFile(
 // CNAME file naming it. Derive it from SITE_URL too, so moving hosts can't
 // leave a stale one behind; a *.github.io URL needs none.
 const HOST = new URL(SITE).hostname
+// Only a site at the root of its own domain may claim it. On a sub-path
+// (learn.xahau.network/rwa-course) the domain belongs to whichever Pages site
+// serves its root, and a CNAME here would try to take it over.
 const CNAME = path.join(ROOT, 'public/CNAME')
-if (HOST.endsWith('.github.io')) await rm(CNAME, { force: true })
-else await writeFile(CNAME, `${HOST}\n`)
+const ownsDomain = new URL(SITE).pathname === '/' && !HOST.endsWith('.github.io')
+if (ownsDomain) await writeFile(CNAME, `${HOST}\n`)
+else await rm(CNAME, { force: true })
 
 const lessons = manifest.reduce((n, m) => n + m.lessons.length, 0)
 console.log(

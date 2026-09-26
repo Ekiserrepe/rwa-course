@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
 # Manual only, on purpose: the site is served at SITE_URL (site.config.js,
-# currently rwa-course.inftf.org), and whoever owns that domain should point
-# its DNS at GitHub Pages before this starts running on its own. To deploy
+# currently learn.xahau.network/rwa-course), and whoever runs that domain
+# should confirm it serves this repository's Pages before this starts running
+# on its own. To deploy
 # automatically on every push to main, uncomment the `push` trigger below and
 # enable Pages (Settings -> Pages -> Source: GitHub Actions).
 #

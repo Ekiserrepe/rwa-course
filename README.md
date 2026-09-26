@@ -6,7 +6,7 @@ deep freeze and clawback, stablecoin settlement on the DEX, coupons, escrowed re
 redemption at maturity, deeds as URITokens, NAV oracles, multisig governance and
 compliance Hooks, ending with a tokenized bond run from term sheet to maturity.
 
-**Read it at [rwa-course.inftf.org](https://rwa-course.inftf.org).**
+**Read it at [learn.xahau.network/rwa-course](https://learn.xahau.network/rwa-course/).**
 
 Built on the design and app of [Learn Xahau](https://github.com/INFTF/xahau-course) and
 Learn URITokens, so the three read as one family. The Xahau courses are listed at
@@ -107,17 +107,20 @@ strings next to each `en` key, and the language picker appears on its own.
 
 ## Deployment
 
-The site is published at [rwa-course.inftf.org](https://rwa-course.inftf.org). That address lives in
-one place, `SITE_URL` in `site.config.js`; the canonical and social links,
-`robots.txt`, `sitemap.xml`, Vite's `base` and GitHub Pages' `CNAME` are all
-derived from it at build time. To move the course (to a `xahau.network`
-subdomain, say), change that line, or set a `SITE_URL` repository variable,
-which the deploy workflow passes to the build, then point the new domain's DNS
-at GitHub Pages.
+The site is published at [learn.xahau.network/rwa-course](https://learn.xahau.network/rwa-course/).
+That address lives in one place, `SITE_URL` in `site.config.js`; the canonical and
+social links, `robots.txt`, `sitemap.xml` and Vite's `base` (here `/rwa-course/`) are
+all derived from it at build time. To move the course, change that line, or set a
+`SITE_URL` repository variable, which the deploy workflow passes to the build.
 
-To publish: point the domain's DNS at GitHub Pages (a `CNAME` record to
-`<owner>.github.io`), set **Settings → Pages → Source** to *GitHub Actions*, and run
-the *Deploy to GitHub Pages* workflow. It is manual-trigger only; uncomment its `push`
+The course lives on a sub-path of `learn.xahau.network`, so this repository doesn't
+own the domain and the build writes no `CNAME`: the domain is attached to whichever
+GitHub Pages site serves its root, and project sites like this one appear under it
+at `/<repository name>`. If the course ever moves to a domain of its own, at the root,
+the build writes the `CNAME` for it automatically.
+
+To publish: set **Settings → Pages → Source** to *GitHub Actions* and run the
+*Deploy to GitHub Pages* workflow. It is manual-trigger only; uncomment its `push`
 trigger to deploy on every push to `main`. The *CI* workflow lints, tests and builds
 every push, and *Verify examples on testnet* runs the whole course against testnet
 every Monday.
@@ -132,5 +135,4 @@ MIT. Use freely for education and community building.
 
 ## Credits
 
-Course app and design from [Learn Xahau](https://learnxahau.inftf.org) by INFTF, via
-Learn URITokens.
+Course by INFTF.

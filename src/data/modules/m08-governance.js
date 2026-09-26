@@ -34,7 +34,7 @@ Whoever controls the ISSUER can create unlimited HBOND, approve anyone, freeze a
 
 ### The target setup for an issuer
 
-1. Create the account and configure it with the master key (Module 2).
+1. Create the account and configure it with the master key ([Module 2](?m=2&l=0)).
 2. Install a **signer list**: several officers, each with their own key on their own device, and a quorum (lesson 2).
 3. **Test** it: have the signers perform a real, harmless action (lesson 3).
 4. **Disable the master key** (lesson 4). From then on, nothing happens without the quorum.
@@ -128,7 +128,7 @@ The three officer keys were generated offline and **never funded**. A signer is 
 2. **Sign.** Each officer signs the **same** prepared transaction with \`wallet.sign(tx, true)\`: the \`true\` means "as one signer of a multisig".
 3. **Combine and submit.** \`multisign([blobA, blobB])\` merges the signatures; submit the result.
 
-The ISSUER's own seed is **never** used:
+The argument is the **holder** to freeze, not a signer: \`node 71-multisig-freeze.js CAROL\` freezes CAROL's line, and \`--off\` lifts it. The signers are always CFO and COUNSEL, and the ISSUER's own seed is **never** used:
 
 \`\`\`
 ✔ freeze carol (CFO + COUNSEL): tesSUCCESS
@@ -166,46 +166,84 @@ The ISSUER's own seed is **never** used:
       id: "m8l4",
       title: { en: "Disabling the Master Key, and When Keys Go Wrong" },
       theory: {
-        en: `### Disable the master key, last
+        en: `### Three ways an account can sign
 
-Once the signer list has been **tested** (lesson 3), the issuer sends:
+Every account on Xahau is born with a **master key**: the key pair derived from the seed that created it. Two more ways to sign can be added later:
+
+| | Master key | Regular key | Signer list |
+|---|---|---|---|
+| What it is | The key pair behind the account's address | One extra key pair, set with \`SetRegularKey\` | Several keys with weights and a quorum, set with \`SignerListSet\` (lesson 2) |
+| Can it be replaced? | **No.** It is tied to the address forever | Yes, by setting a new one | Yes, by the quorum signing a new list |
+| Can it be switched off? | Yes, with \`asfDisableMaster\` | Yes, by removing it | Yes, by deleting the list |
+| One person can act alone? | Yes | Yes | Only if the quorum is 1 |
+
+The first row is the important one. The master key can't be rotated: whoever has a copy of the seed has full control of the account for as long as the key works. For an ordinary wallet that's acceptable. For an issuer it isn't. The issuer's seed existed on the machine that created the account, perhaps in a backup or a password manager, and a single leak would give someone the power to issue, freeze and claw back HBOND for the life of the bond.
+
+So once the officers' signer list is in place, the issuer **switches the master key off**. From then on, only the quorum can act, and the quorum's keys can be replaced whenever an officer leaves or a key is compromised.
+
+### The order matters
+
+1. **Install the signer list** ([lesson 2](?m=8&l=1)).
+2. **Use it for a real action** ([lesson 3](?m=8&l=2)): a multisigned freeze and unfreeze proves that the signers hold working keys and can coordinate.
+3. **Disable the master key**, with an \`AccountSet\` signed by the master key itself:
 
 \`\`\`json
 { "TransactionType": "AccountSet", "Account": "<ISSUER>", "SetFlag": 4 }
 \`\`\`
 
-\`asfDisableMaster\` (4) makes the master key useless. We tried it on a scratch account:
+\`SetFlag: 4\` is \`asfDisableMaster\`. The flag can be cleared later with \`ClearFlag: 4\`, but only by a transaction the signer list signs, since the master key no longer can.
+
+Skipping step 2 is the dangerous mistake. The ledger can't know whether the officers really hold their keys. If they don't, disabling the master key leaves an issuer nobody can sign for.
+
+### What the ledger allows, step by step
+
+\`72-disable-master.js\` walks through the rules on a throwaway account, never on the ISSUER:
 
 \`\`\`
+✔ create a scratch account: tesSUCCESS
 ✘ disable master, no regular key/signer list: tecNO_ALTERNATIVE_KEY
 ✔ signer list 1-of-1: tesSUCCESS
 ✔ disable master, with signer list: tesSUCCESS
   master key after disabling → tefMASTER_DISABLED
 \`\`\`
 
-The ledger refuses to disable it unless the account has a regular key or a signer list, so you can't lock yourself out by accident. But you **can** lock yourself out with a signer list whose keys you've lost. Test first; the course's ISSUER keeps its master key only so the lessons stay simple.
+- **\`tecNO_ALTERNATIVE_KEY\`**: with no regular key and no signer list, the ledger refuses to disable the master key. Without it the account would have no way to sign at all, and this rule prevents that.
+- **With a signer list**, the same transaction succeeds.
+- **\`tefMASTER_DISABLED\`**: anything signed with the master key afterwards is rejected before it reaches a ledger. A \`tef\` code means the transaction was never applied, so it costs nothing and changes nothing.
 
-To re-enable the master key later, the quorum signs \`ClearFlag: 4\`.
+The ledger's safeguard has a limit: it checks that another way to sign **exists**, not that anyone can still **use** it. A signer list whose keys are lost passes the check and still locks the account for good. That is why step 2 comes first.
 
-### Incident playbook
+The course's ISSUER keeps its master key so that every script in the course can keep signing with one seed. A production issuer shouldn't.
 
-| What happened | Do this |
-|---|---|
-| A **treasury** key leaked | Freeze the treasury's HBOND line (issuer quorum). Move what you can to a new treasury. Claw back from the old one if needed. Unfreeze nothing until you understand how it leaked |
-| **One officer's** key lost or stolen | The other two replace the signer list, without that key |
-| **Two officers'** keys stolen | They can act as the issuer: global freeze first (if you still can), then the legal process. This is why keys must be spread across people and places |
-| An **investor** lost their key | Freeze, claw back, KYC a new address, re-issue (the capstone's incident) |
-| Every issuer key lost | The token can't be administered anymore. Only a new issuer and a migration (with holders' cooperation) fixes it |
+### When keys go wrong
+
+The right response depends on **which** key is affected and **who can still reach the quorum**. Keep one distinction in mind: a key that is *stolen* has been copied, and the officers still hold it too, so both sides can use it and speed matters. A key that is *lost* is simply gone.
+
+| What happened | Why it matters | Do this |
+|---|---|---|
+| A **treasury** key leaked | The treasury is an ordinary holder: whoever has its key can move its HBOND and USD | The issuer's quorum **freezes the treasury's HBOND line** at once: frozen HBOND can only go back to the issuer. Move the USD, which the issuer can't freeze, to a new treasury. Claw back the old treasury's HBOND and re-issue it to the new one. Find out how the key leaked before trusting the new setup |
+| **One officer's** key lost or stolen | The other two still reach the 2-of-3 quorum | They sign a new \`SignerListSet\` that replaces that key with a fresh one. Until then the old key alone can't do anything |
+| **Two officers'** keys stolen | The attacker now reaches the quorum and can act as the issuer, including replacing the signer list to lock the officers out | The officers hold the same keys and must act first: **replace the signer list** with new keys immediately, then consider a **global freeze** while the damage is assessed, then the legal process. The best defence is prevention: keep keys with different people, in different places, on hardware wallets |
+| An **investor** lost their key | Their tokens are stuck: nobody can move tokens out of an account without its key | Freeze the old line, claw back, complete KYC for the investor's new address, re-issue. The capstone runs this procedure ([Module 10](?m=10&l=3)) |
+| **Every** issuer key lost | Nobody can issue, freeze or claw back any more. Transfers between holders keep working under the settings already in place | The token can't be administered. The only remedy is a new issuer and a migration to a new token, with the holders' cooperation |
 
 ### Testnet is not a rehearsal for keys
 
-Everything in this course keeps seeds in \`.env\`. On mainnet, issuer signers use hardware wallets or an HSM, signing happens on separate machines, and the seed is never typed into a server. Module 11 has the checklist.
+Every script in this course reads its seeds from \`.env\`, which is fine for testnet and nothing else. On mainnet, issuer signers keep their keys on hardware wallets or in an HSM, each officer signs on their own device, and no seed is ever typed into a server. [Module 11](?m=11&l=3) turns this into a checklist.
 
 ### In the Xahau docs
 
 - [AccountSet (asfDisableMaster)](https://docs.xahau.network/protocol-reference/transactions/transaction-types/accountset/)
-- [SetRegularKey](https://docs.xahau.network/protocol-reference/transactions/transaction-types/setregularkey/)`,
+- [SetRegularKey](https://docs.xahau.network/protocol-reference/transactions/transaction-types/setregularkey/)
+- [SignerListSet](https://docs.xahau.network/protocol-reference/transactions/transaction-types/signerlistset/)`,
       },
+      codeBlocks: [
+        {
+          title: { en: "examples/72-disable-master.js" },
+          language: "javascript",
+          code: example("72-disable-master.js"),
+        },
+      ],
       slides: [
         {
           title: { en: "Master Key Off, Last" },

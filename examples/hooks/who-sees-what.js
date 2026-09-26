@@ -5,6 +5,15 @@
 // ISSUER, then sends HBOND two ways, then removes the probe:
 //   holder -> holder: the issuer is only a weak party, the Hook is not asked
 //   holder -> issuer: the issuer is the destination, a strong party: refused
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 21-transfer.js TREASURY ALICE 500
+//   node 21-transfer.js TREASURY BOB 300
 const { connect, wallet, submit, bond } = require("../lib/xahau");
 const { install, remove } = require("./lib");
 

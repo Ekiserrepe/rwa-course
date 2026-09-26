@@ -160,9 +160,9 @@ Anything that acts on a price (a margin call, a collateral check, a subscription
 
 | Claim | Tool | What a reader can verify |
 |---|---|---|
-| "10,000 HBOND exist, 800 sold" | \`gateway_balances\` | Exactly, from the ledger (Module 2) |
-| "The next coupon is set aside" | USD escrow | Amount locked and release date (Module 5) |
-| "The bond is secured by this warehouse" | Deed URIToken + linking remarks | Which deed, which document, that it wasn't swapped (Module 6) |
+| "10,000 HBOND exist, 800 sold" | \`gateway_balances\` | Exactly, from the ledger ([Module 2](?m=2&l=3)) |
+| "The next coupon is set aside" | USD escrow | Amount locked and release date ([Module 5](?m=5&l=2)) |
+| "The bond is secured by this warehouse" | Deed URIToken + linking remarks | Which deed, which document, that it wasn't swapped ([Module 6](?m=6&l=3)) |
 | "NAV is 100.37" | Oracle | Who said it and when (lesson 1) |
 | "An auditor checked our accounts" | Remark with the audit report's SHA-256 | That the report you have is the one published |
 | "Our cash is at Bank X" | Nothing on-ledger | Only the custodian's statement |

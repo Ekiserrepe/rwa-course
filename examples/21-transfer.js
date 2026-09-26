@@ -5,7 +5,13 @@
 // Roles are the names in .env: TREASURY, ALICE, BOB, CAROL.
 //
 // If the issuer charges a TransferRate, a payment between two holders needs a
-// SendMax that covers the fee, or it fails with tecPATH_PARTIAL (tested).
+// SendMax that covers the fee, or it fails with tecPATH_PARTIAL.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve  (and for every receiver)
 const { connect, wallet, submit, trustLine, BOND_CODE, bond } = require("./lib/xahau");
 
 async function main() {

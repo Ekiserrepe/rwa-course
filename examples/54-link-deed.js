@@ -5,6 +5,9 @@
 //   issuer account --remarks-->  token code + deed ID
 //   deed token     --remarks-->  issuer + token code it secures
 //   the token code's issuer is the issuer account itself
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 51-mint-deed.js  (it prints the URITokenID to pass here)
 const { hashes } = require("xahau");
 const { connect, wallet, submit, toHex, fromHex, getObject, BOND_CODE } = require("./lib/xahau");
 

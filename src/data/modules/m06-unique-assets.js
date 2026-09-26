@@ -104,6 +104,11 @@ One practical warning: the fingerprint covers **bytes**, not meaning. Re-saving 
       },
       codeBlocks: [
         {
+          title: { en: "examples/assets/warehouse-deed.txt" },
+          language: "text",
+          code: example("assets/warehouse-deed.txt"),
+        },
+        {
           title: { en: "examples/50-document-digest.js" },
           language: "javascript",
           code: example("50-document-digest.js"),
@@ -145,7 +150,7 @@ One practical warning: the fingerprint covers **bytes**, not meaning. Re-saving 
 
 ### Only the issuer writes Remarks
 
-On a URIToken, **only its issuer** can set Remarks; the owner gets \`tecNO_PERMISSION\` (tested in the companion URIToken course). For a registry that's exactly right: after the deed is sold, the buyer owns the token, but the registrar keeps authority over what the token says about the property.
+On a URIToken, **only its issuer** can set Remarks; the owner gets \`tecNO_PERMISSION\` (shown in the companion URIToken course). For a registry that's exactly right: after the deed is sold, the buyer owns the token, but the registrar keeps authority over what the token says about the property.
 
 ### Rules
 
@@ -205,7 +210,7 @@ and the script exits with code 2, so it can gate an automated process.
 
 ### What the check proves, and what it doesn't
 
-It proves that **this document is the one the issuer committed to when it minted**, and that the token hasn't been burned. It doesn't prove the document is true: that the warehouse exists, or that the valuation is honest. That's the legal layer again (Module 1). The ledger's job is to make sure everyone is at least talking about the same document.
+It proves that **this document is the one the issuer committed to when it minted**, and that the token hasn't been burned. It doesn't prove the document is true: that the warehouse exists, or that the valuation is honest. That's the legal layer again ([Module 1](?m=1&l=1)). The ledger's job is to make sure everyone is at least talking about the same document.
 
 ### In the Xahau docs
 
@@ -249,7 +254,7 @@ Issuer account remarks:
   token              48424F4E44000000000000000000000000000000 (HBOND): 100 USD face, 5% fixed, matures 2030-06-30
 \`\`\`
 
-An investor who starts from their HBOND trust line finds the issuer, its fact sheet and the deed; a lender who starts from the deed finds the bond. This is the fractional-ownership pattern from Module 1, with the links written into the ledger instead of a PDF.
+An investor who starts from their HBOND trust line finds the issuer, its fact sheet and the deed; a lender who starts from the deed finds the bond. This is the fractional-ownership pattern from [Module 1](?m=1&l=2), with the links written into the ledger instead of a PDF.
 
 ### Selling the deed: DvP for a unique asset
 
@@ -265,7 +270,7 @@ At maturity the SPV may sell the warehouse to repay the bond. A URIToken sale is
   owner is now BOB, issuer still rN4AAuFksWwA2fwV3mgRNVNirMKqfRRpZT
 \`\`\`
 
-(The price is scaled down so the test buyer can afford it.) Two things we noticed:
+(The price is scaled down so the test buyer can afford it.) Two points to keep in mind:
 
 - The ISSUER had **no USD trust line** before the sale, yet it received the 1,000 USD: the purchase created the seller's line for it.
 - The **issuer is still the issuer**. It can still update the remarks (say, \`lien\` → released) and, because the deed is burnable, still revoke it. The buyer should check both before paying (lesson 4).

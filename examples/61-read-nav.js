@@ -1,5 +1,8 @@
 // 61-read-nav.js: read a published NAV, and refuse it if it is stale
 //   node 61-read-nav.js [rPublisher] [maxAgeSeconds=86400]
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 60-publish-nav.js
 const { connect, wallet, currencyName } = require("./lib/xahau");
 
 async function main() {

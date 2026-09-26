@@ -4,6 +4,11 @@
 // gateway_balances answers from the issuer's side: "obligations" is the
 // supply in circulation. Naming the treasury as a hotwallet separates what
 // the issuer's own team holds from what investors hold.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
 const { connect, wallet, currencyName, BOND_CODE } = require("./lib/xahau");
 
 async function main() {

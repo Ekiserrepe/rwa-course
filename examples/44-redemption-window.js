@@ -8,6 +8,18 @@
 // It refuses to open a window the treasury cannot fund. An offer the owner
 // can't pay for is skipped by the DEX, so nobody would lose anything, but a
 // redemption promise you can't keep is still a default.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 30-stablecoin-setup.js
+//   node 31-primary-offer.js 5000 100
+//   node 33-subscribe.js ALICE 20
+//   node 33-subscribe.js BOB 30 100
+//   (and fund the TREASURY with the principal: the script says how much is missing)
 const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("./lib/xahau");
 
 async function main() {

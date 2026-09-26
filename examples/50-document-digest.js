@@ -5,9 +5,11 @@
 // digest; any change, even one character, gives a completely different one.
 const crypto = require("crypto");
 const fs = require("fs");
+const path = require("path");
 
+// Your own file is read from where you run this; the default is the course's deed
 const file = process.argv[2] ?? "assets/warehouse-deed.txt";
-const bytes = fs.readFileSync(file);
+const bytes = fs.readFileSync(process.argv[2] ?? path.join(__dirname, file));
 const digest = crypto.createHash("sha256").update(bytes).digest("hex").toUpperCase();
 console.log(`${file} (${bytes.length} bytes)`);
 console.log(`  SHA-256: ${digest}`);

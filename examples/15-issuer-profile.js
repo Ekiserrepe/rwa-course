@@ -4,6 +4,9 @@
 // Remarks on the issuer's AccountRoot: anyone who looks up the token's issuer
 // sees them, no website needed. The legal name and the prospectus digest are
 // immutable; the status can change.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
 const crypto = require("crypto");
 const { hashes } = require("xahau");
 const { connect, wallet, submit, toHex, fromHex, getObject, BOND_CODE } = require("./lib/xahau");

@@ -65,6 +65,8 @@ function getStateFromURL() {
   const m = parseInt(params.get('m') ?? '-1', 10)
   const l = parseInt(params.get('l') ?? '0', 10)
   const slides = params.get('s') === '1'
+  // A link to a file in a lesson's Code tab: ?m=5&l=3&t=code&f=46-retire-supply.js
+  const file = params.get('t') === 'code' ? params.get('f') : null
   if (m >= 0 && m < COURSE_META.length) {
     const mod = COURSE_META[m]
     const lIdx = l >= 0 && l < mod.lessons.length ? l : 0
@@ -74,9 +76,10 @@ function getStateFromURL() {
       activeModuleIdx: m,
       activeLessonIdx: lIdx,
       showSlides: slides && hasSlides,
+      file: mod.lessons[lIdx]?.files?.includes(file) ? file : null,
     }
   }
-  return { view: 'overview', activeModuleIdx: 0, activeLessonIdx: 0, showSlides: false }
+  return { view: 'overview', activeModuleIdx: 0, activeLessonIdx: 0, showSlides: false, file: null }
 }
 
 function buildURL(view, mIdx, lIdx, slides = false) {
@@ -104,6 +107,8 @@ export default function App() {
   const [activeModuleIdx, setActiveModuleIdx] = useState(initialState.activeModuleIdx)
   const [activeLessonIdx, setActiveLessonIdx] = useState(initialState.activeLessonIdx)
   const [showSlides, setShowSlides] = useState(initialState.showSlides)
+  // Set when a theory link opens a file in another lesson's Code tab
+  const [pendingFile, setPendingFile] = useState(initialState.file)
 
   // The open module's full content. Metadata renders immediately from the
   // manifest; this is the megabyte of theory, code and slides behind it.
@@ -176,6 +181,7 @@ export default function App() {
       setActiveModuleIdx(s.activeModuleIdx)
       setActiveLessonIdx(s.activeLessonIdx)
       setShowSlides(s.showSlides)
+      setPendingFile(s.file)
     }
     window.addEventListener('popstate', handlePopState)
     // Replace the current history entry so the initial URL is canonical
@@ -227,13 +233,19 @@ export default function App() {
   }, [view, activeLessonIdx, currentMeta, lang, t])
 
   // Central navigation: updates state AND pushes a browser history entry
-  const navigate = useCallback((nextView, mIdx, lIdx, slides = false) => {
+  const navigate = useCallback((nextView, mIdx, lIdx, slides = false, file = null) => {
     window.history.pushState(null, '', buildURL(nextView, mIdx, lIdx, slides))
     setView(nextView)
     setActiveModuleIdx(mIdx)
     setActiveLessonIdx(lIdx)
     setShowSlides(slides)
+    setPendingFile(file)
   }, [])
+
+  const goToFile = useCallback(
+    (mIdx, lIdx, file) => navigate('lesson', mIdx, lIdx, false, file),
+    [navigate],
+  )
 
   const openLesson = useCallback(
     (mIdx, lIdx) => navigate('lesson', mIdx, lIdx),
@@ -403,6 +415,8 @@ export default function App() {
         onPrev={goPrev}
         onNext={goNext}
         onGoToLesson={(lIdx) => navigate('lesson', activeModuleIdx, lIdx)}
+        onGoToFile={goToFile}
+        pendingFile={pendingFile}
         onOpenSearch={() => setSearchOpen(true)}
         loadFailed={loadError === activeModuleIdx}
         onRetryLoad={retryLoad}

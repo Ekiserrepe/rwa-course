@@ -3,6 +3,9 @@
 //
 // Step 1 always runs: the investor opens a trust line (a request).
 // Step 2 runs only with --approve: the issuer authorises it, after KYC.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
 const { connect, wallet, submit, trustLine, BOND_CODE, bond } = require("./lib/xahau");
 
 const tfSetfAuth = 0x00010000;

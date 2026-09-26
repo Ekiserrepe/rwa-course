@@ -25,11 +25,11 @@ By the end you will have run that bond's whole life, from the issuer's first set
 
 ### What you need to know already
 
-Only how to run a script from a terminal and read a little JavaScript. **No blockchain or finance knowledge is assumed.** The next lessons explain blockchains, accounts, keys, transactions and ledger objects in plain words, and Module 1 explains what "real-world asset" and "tokenization" actually mean. If you already know Xahau or the XRP Ledger, skim this module and jump to lesson 7.
+Only how to run a script from a terminal and read a little JavaScript. **No blockchain or finance knowledge is assumed.** The next lessons explain blockchains, accounts, keys, transactions and ledger objects in plain words, and [Module 1](?m=1&l=0) explains what "real-world asset" and "tokenization" actually mean. If you already know Xahau or the XRP Ledger, skim this module and jump to lesson 7.
 
 Every module starts with the **new words** it introduces, and the [Glossary](?m=0&l=9) at the end of this module defines every term in the course. Each lesson ends with links to the matching pages of the official [Xahau documentation](https://docs.xahau.network/).
 
-This course belongs to a family: for general Xahau see [Learn Xahau](https://learnxahau.inftf.org); for NFTs see [Learn URITokens](https://github.com/Ekiserrepe/uritoken-course).
+This course belongs to a family with **Learn Xahau** (Xahau in general) and **Learn URITokens** (NFTs): find them at [xahau.network/learn](https://xahau.network/learn/).
 
 ### How the course is organised
 
@@ -50,7 +50,7 @@ This course belongs to a family: for general Xahau see [Learn Xahau](https://lea
 
 ### Every script is real
 
-The code in this course comes from the \`examples/\` folder of the course repository, and the lessons show those files verbatim. Every script was run against Xahau testnet while the course was written, and a script (\`npm run verify\`) runs all of them again and checks each result. Where the ledger surprised us, for example when a flag we set turned out to mean something else on Xahau, the lesson says so.
+The code in this course comes from the \`examples/\` folder of the course repository, and the lessons show those files verbatim. Every script was run against Xahau testnet while the course was written, and a script (\`npm run verify\`) runs all of them again and checks each result. Where Xahau behaves differently from what you might expect (for example, a flag whose number differs from the XRP Ledger's), the lesson points it out.
 
 ### Not legal advice
 
@@ -152,13 +152,13 @@ A key pair alone is not an account yet. The account appears on the ledger the fi
 
 ### The wallet: an app that holds keys
 
-A **wallet** is software that stores your seed and uses it to **sign** transactions. On Xahau the most used is **Xaman**, a phone app. In this course's scripts, the "wallet" is simply a seed loaded from a file called \`.env\`: fine for testnet practice, never for an issuer's real keys (Module 8 and 11).
+A **wallet** is software that stores your seed and uses it to **sign** transactions. On Xahau the most used is **Xaman**, a phone app. In this course's scripts, the "wallet" is simply a seed loaded from a file called \`.env\`: fine for testnet practice, never for an issuer's real keys (Modules [8](?m=8&l=0) and [11](?m=11&l=2)).
 
 ### Signing: how the network knows it was you
 
 When you want to change something, your wallet uses the seed to produce a **signature**: a proof, mathematically tied to your keys and to the exact content of the request. Any node can check it with your public key. Nobody can forge it without the seed, and changing even one character of the request breaks it.
 
-For an issuer this is the whole security model: **whoever holds the issuer's key can create unlimited tokens**. That's why Module 8 spreads that power over several people.
+For an issuer this is the whole security model: **whoever holds the issuer's key can create unlimited tokens**. That's why [Module 8](?m=8&l=1) spreads that power over several people.
 
 ### In the Xahau docs
 
@@ -359,19 +359,19 @@ A token amount is an object: \`{ "currency": "USD", "issuer": "r…", "value": "
 
 ### Trust lines
 
-To hold someone's token you must first say "I accept this token from this issuer, up to this amount". That agreement is a **trust line** (the \`RippleState\` object), created with \`TrustSet\`. It protects you from receiving tokens you never wanted, and it is also where the issuer's controls live: approval (KYC), freeze and clawback all act on trust lines (Module 3).
+To hold someone's token you must first say "I accept this token from this issuer, up to this amount". That agreement is a **trust line** (the \`RippleState\` object), created with \`TrustSet\`. It protects you from receiving tokens you never wanted, and it is also where the issuer's controls live: approval (KYC), freeze and clawback all act on trust lines ([Module 3](?m=3&l=0)).
 
 ### Unique tokens: URITokens
 
-A **fungible** token is interchangeable: one HBOND is as good as another. A **non-fungible** token is unique: this deed, this invoice, this certificate. On Xahau, unique tokens are **URITokens**: ledger objects that point to their content with a **URI** and can carry a fingerprint of it (Module 6).
+A **fungible** token is interchangeable: one HBOND is as good as another. A **non-fungible** token is unique: this deed, this invoice, this certificate. On Xahau, unique tokens are **URITokens**: ledger objects that point to their content with a **URI** and can carry a fingerprint of it ([Module 6](?m=6&l=1)).
 
 ### The exchange (DEX)
 
-Xahau has a **decentralised exchange (DEX)** built into the ledger: anyone can place an **order** ("I sell 10 HBOND for 1,000 USD") with \`OfferCreate\`, and matching orders trade automatically, in one transaction, with no company in the middle (Module 4).
+Xahau has a **decentralised exchange (DEX)** built into the ledger: anyone can place an **order** ("I sell 10 HBOND for 1,000 USD") with \`OfferCreate\`, and matching orders trade automatically, in one transaction, with no company in the middle ([Module 4](?m=4&l=1)).
 
 ### Hooks: programs on accounts
 
-A **Hook** is a small program installed on an account. It runs when a transaction involves that account, and it can **accept** it, **reject** it, remember data, or send new transactions. Module 9 writes two for an RWA issuer, and shows precisely where their power ends.
+A **Hook** is a small program installed on an account. It runs when a transaction involves that account, and it can **accept** it, **reject** it, remember data, or send new transactions. [Module 9](?m=9&l=0) writes two for an RWA issuer, and shows precisely where their power ends.
 
 ### Remarks: notes on objects
 
@@ -425,7 +425,7 @@ A tokenized asset is never one account. The scripts use six testnet accounts, ea
 ### Security, even on testnet
 
 - \`.env\` is in \`.gitignore\`. Keep it that way.
-- Testnet seeds are worthless. An issuer's mainnet key can create unlimited claims on a real company: it never lives in a file (Module 8 and 11).
+- Testnet seeds are worthless. An issuer's mainnet key can create unlimited claims on a real company: it never lives in a file (Modules [8](?m=8&l=0) and [11](?m=11&l=2)).
 
 ### Explorers
 

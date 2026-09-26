@@ -5,6 +5,9 @@
 // Phases: accounts, issuer, stablecoin, supply, kyc, offering, nav, coupon,
 // incident, maturity, audit. Each one checks its own result and stops the run
 // if something is off. Everything comes from term-sheet.json.
+//
+// Run first (from examples/): node 01-create-accounts.js. The capstone creates
+// its own accounts, funded by CAROL, so nothing else is needed.
 const fs = require("fs");
 const path = require("path");
 const { Wallet, xahToDrops, hashes } = require("xahau");

@@ -4,12 +4,17 @@
 // What a buyer, a lender or an auditor runs before relying on a deed token:
 // the digest on the ledger must equal the digest of the document in hand,
 // and the token must come from the issuer they expect.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 51-mint-deed.js  (it prints the URITokenID to pass here)
 const crypto = require("crypto");
 const fs = require("fs");
+const path = require("path");
 const { connect, wallet, fromHex, getObject } = require("./lib/xahau");
 
 async function main() {
-  const [id, file = "assets/warehouse-deed.txt"] = process.argv.slice(2);
+  // Your own file is read from where you run this; the default is the course's deed
+  const [id, file = path.join(__dirname, "assets/warehouse-deed.txt")] = process.argv.slice(2);
   if (!/^[0-9A-F]{64}$/i.test(id ?? "")) throw new Error("Usage: 53-verify-deed.js <URITokenID> [file]");
   const client = await connect();
   const token = await getObject(client, id);

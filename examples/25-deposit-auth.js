@@ -4,6 +4,15 @@
 // TREASURY turns on DepositAuth and preauthorises ALICE. Then ALICE and BOB
 // each try to send it 1 HBOND: only ALICE gets through. Finally the setting is
 // turned off again so later lessons are not affected.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 21-transfer.js TREASURY ALICE 500
+//   node 21-transfer.js TREASURY BOB 300
 const { connect, wallet, submit, bond } = require("./lib/xahau");
 
 const asfDepositAuth = 9;

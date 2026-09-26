@@ -12,7 +12,11 @@ Seeds go to `.env` (git-ignored; a previous one is kept as `.env.bak`). **Testne
 
 Every script prints `✔`/`✘` per transaction and exits with code 1 on errors, with a
 one-line message instead of a stack trace. Roles are the names in `.env`:
-`ISSUER`, `TREASURY`, `ALICE`, `BOB`, `CAROL`, `STABLE`.
+`ISSUER`, `TREASURY`, `ALICE`, `BOB`, `CAROL`, `STABLE`, plus `CFO`, `COO` and `COUNSEL`
+(added by `70-multisig-setup.js`) and `VAULT` (added by `hooks/install-lockbox.js`).
+
+Run the scripts in lesson order. Each one's header lists what must run before it
+("Run first"), and every script uses `examples/.env` whichever folder you run it from.
 
 | Script | Module | What it does |
 |---|---|---|
@@ -36,8 +40,8 @@ one-line message instead of a stack trace. Roles are the names in `.env`:
 | `52-deed-remarks.js` · `53-verify-deed.js` | 6 | immutable/mutable facts; verify token vs document |
 | `54-link-deed.js` · `55-sell-deed.js` | 6 | deed ↔ bond links; DvP deed sale |
 | `60-publish-nav.js` · `61-read-nav.js` | 7 | OracleSet; ledger_entry + get_aggregate_price, stale check |
-| `70-multisig-setup.js` · `71-multisig-freeze.js` | 8 | 2-of-3 signer list; a multisigned freeze |
-| `hooks/*` | 9 | `probe`, `subscription_desk`, `holding_cap` (C + Wasm + installers), `build.sh` |
+| `70-multisig-setup.js` · `71-multisig-freeze.js` · `72-disable-master.js` | 8 | 2-of-3 signer list; a multisigned freeze; disabling a master key, on a scratch account |
+| `hooks/*` | 9 | `probe`, `subscription_desk`, `holding_cap`, `lockbox` (C + Wasm + installers), `build.sh` |
 | `capstone/run.js` · `capstone/term-sheet.json` | 10 | the whole bond, eleven checked phases |
 | `90-preflight.js` | 11 | read-only launch check of an issuer |
 | `verify/run-all.mjs` | all | `npm run verify`: runs everything on testnet and checks each result |

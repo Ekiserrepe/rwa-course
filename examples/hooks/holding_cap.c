@@ -3,7 +3,7 @@
  *
  * Install on the ISSUER with hsfCollect, and set asfTshCollect on the issuer.
  * HookOn must include OfferCreate as well as Payment: without it, the issuer's
- * Hook is not run at all on DEX trades (tested).
+ * Hook is not run at all on DEX trades.
  *
  * Xahau makes a token's issuer only a WEAK stakeholder of payments between two
  * holders: its Hook runs after the payment has been applied, cannot refuse

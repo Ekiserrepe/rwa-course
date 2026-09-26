@@ -21,6 +21,7 @@ import { MODULE_FILES } from '../src/data/module-list.js'
 import { LOCALES } from '../src/data/locales.js'
 import { UI_LABELS } from '../src/data/i18n.js'
 import { COURSE_MANIFEST } from '../src/data/generated/manifest.js'
+import { codeFile } from '../src/data/code-files.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -73,12 +74,32 @@ describe('modules', () => {
 
   it('every code block uses a language the highlighter registers', () => {
     // CodeBlock.jsx registers these; anything else renders unhighlighted.
-    const registered = new Set(['javascript', 'bash', 'sh', 'c', 'json', 'html', 'text'])
+    const registered = new Set(['javascript', 'bash', 'sh', 'c', 'json', 'html', 'toml', 'text'])
     for (const { mod } of modules) {
       for (const lesson of mod.lessons) {
         for (const block of lesson.codeBlocks ?? []) {
           const lang = block.language || 'text'
           expect(registered, `${lesson.id} uses unregistered language "${lang}"`).toContain(lang)
+        }
+      }
+    }
+  })
+
+  it('every source file the theory names is shown in some Code tab', () => {
+    // Theory links `46-retire-supply.js` to the file's Code tab; a name with
+    // nothing to link to is a lesson talking about code the reader can't see.
+    // Binaries (.wasm) and files the scripts write (.json) are not sources.
+    const shown = modules.flatMap(({ mod }) =>
+      mod.lessons.flatMap((l) => (l.codeBlocks ?? []).map(codeFile)),
+    )
+    for (const { mod } of modules) {
+      for (const lesson of mod.lessons) {
+        for (const [, name] of (lesson.theory?.en ?? '').matchAll(/`((?:[\w-]+\/)*[\w.-]+\.(?:js|mjs|c|sh|toml|txt))`/g)) {
+          const file = name.replace(/^examples\//, '')
+          expect(
+            shown.some((f) => f === file || f.endsWith('/' + file)),
+            `${lesson.id} names ${name}, which no Code tab shows`,
+          ).toBe(true)
         }
       }
     }

@@ -24,6 +24,8 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
+const { codeFile } = await import(path.join(ROOT, 'src/data/code-files.js'))
+
 const { SITE_URL: SITE } = await import(path.join(ROOT, 'site.config.js'))
 
 // ── 0. Example sources ──────────────────────────────────────────────────────
@@ -32,7 +34,7 @@ const { SITE_URL: SITE } = await import(path.join(ROOT, 'site.config.js'))
 // the file people actually run. Must be written before the modules import it.
 
 const EXAMPLES_DIR = path.join(ROOT, 'examples')
-const EXAMPLE_EXT = /\.(js|c|sh|html)$|^term-sheet\.json$/
+const EXAMPLE_EXT = /\.(js|c|sh|html)$|^term-sheet\.json$|^xahau\.toml$|^warehouse-deed\.txt$/
 const SKIP = new Set(['node_modules', 'art', 'metadata', 'include'])
 
 async function collectExamples(dir, prefix = '') {
@@ -86,6 +88,8 @@ const manifest = modules.map(({ file, mod }) => ({
     title: l.title,
     hasCode: !!l.codeBlocks?.length,
     codeCount: l.codeBlocks?.length ?? 0,
+    // Which examples/ files the Code tab shows, so theory can link to them
+    files: (l.codeBlocks ?? []).map(codeFile),
     hasSlides: !!l.slides?.length,
   })),
 }))

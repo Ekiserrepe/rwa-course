@@ -4,6 +4,14 @@
 // tfFillOrKill: the whole amount at or under the price cap, or nothing.
 // Payment and delivery happen in the same transaction (delivery versus
 // payment): nobody can end up having paid without receiving, or the reverse.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve  (the buyer)
+//   node 30-stablecoin-setup.js
+//   node 31-primary-offer.js 5000 100
 const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("./lib/xahau");
 
 const tfFillOrKill = 0x00040000;

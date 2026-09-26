@@ -95,7 +95,7 @@ Paid 0 USD this run.
 - **Round down** to the cent. Rounding up on thousands of holders pays out more than the terms promise.
 - **\`--dry-run\` first**, always. The dry run is what your finance team signs off.
 - **Frozen holders are held back**, not skipped silently: the script prints them so someone decides.
-- **Coupons in the stablecoin** keep working during a global freeze of HBOND (Module 3), because they don't move HBOND.
+- **Coupons in the stablecoin** keep working during a global freeze of HBOND ([Module 3](?m=3&l=2)), because they don't move HBOND.
 - **Thousands of holders**: send in parallel with **Tickets** (\`TicketCreate\` reserves sequence numbers so several transactions can be in flight at once). The idempotency check stays the same.
 
 ### Why not pay with the DEX or a Hook?
@@ -150,13 +150,13 @@ Released too early: \`tecNO_PERMISSION\`, nothing changes. After \`FinishAfter\`
 
 ### The catch: tokens with clawback can't be escrowed
 
-The obvious next idea is a **lock-up**: escrow investors' HBOND so they can't sell for a year. We tried:
+Many offerings require a **lock-up**: investors' tokens can't be sold for a period. With a token whose issuer has clawback, escrow can't provide it:
 
 \`\`\`
 ✘ escrow 10 HBOND (issuer has clawback): tecNO_PERMISSION
 \`\`\`
 
-Reading xahaud's source explains it. Before creating any locked token balance, it checks the issuer, and **refuses if the issuer has \`lsfAllowTrustLineClawback\` set**: clawback and locked balances can't coexist. USD worked because STABLE never enabled clawback.
+The reason is a rule in xahaud: before creating any locked token balance, it checks the issuer and **refuses if the issuer has \`lsfAllowTrustLineClawback\` set**: clawback and locked balances can't coexist. USD worked because STABLE never enabled clawback.
 
 So an RWA issuer on Xahau chooses, **once and forever**, before the first trust line:
 
@@ -171,7 +171,7 @@ If you chose clawback, as Harbor Bond did:
 
 - **Deliver late**: keep locked allocations in the treasury, or in a USD escrow for their purchase price, and deliver the tokens when the lock-up ends. Simple and honest.
 - **Freeze until the date**: issue the tokens and freeze the holder's line until the lock-up ends. The holder can't sell (only return tokens to the issuer); lifting it is one transaction. The freeze is visible to everyone, which doubles as disclosure.
-- **A Hook can't do it**: Module 9 shows the issuer's Hook can't block transfers between holders.
+- **A lockbox with a Hook**: move the tokens to a dedicated vault account whose Hook lets them out only on the release date, while the issuer keeps its clawback. The issuer's own Hook couldn't do this, since it can't block transfers between holders; a Hook on the account that **holds** the tokens can. [Module 9](?m=9&l=3) builds it.
 
 ### In the Xahau docs
 
@@ -199,7 +199,7 @@ If you chose clawback, as Harbor Bond did:
         },
         {
           title: { en: "Clawback XOR Escrow" },
-          content: { en: "Issuer with clawback → its token\ncan't be escrowed (tecNO_PERMISSION)\n\nLock-ups: deliver late, or freeze until date" },
+          content: { en: "Issuer with clawback → its token\ncan't be escrowed (tecNO_PERMISSION)\n\nLock-ups: deliver late, freeze until date,\nor a lockbox Hook (Module 9)" },
           visual: "⚖️",
         },
       ],
@@ -208,16 +208,16 @@ If you chose clawback, as Harbor Bond did:
       id: "m5l4",
       title: { en: "Maturity: an Atomic Redemption Window" },
       theory: {
-        en: `At maturity every holder must get face value back, and every token must disappear. This is where we made the course's most instructive mistake.
+        en: `At maturity every holder must get face value back, and every token must disappear. The exchange has to be **atomic**: the holder gives up the bonds and receives the principal in the same step, or neither happens.
 
-### The first design: two payments
+### Why two payments are not enough
 
-Our first redemption script did the obvious thing:
+The intuitive design uses two transactions:
 
 1. The holder pays its HBOND back to the issuer (tokens paid to their issuer are destroyed).
 2. The treasury pays the holder face value in USD.
 
-It ran like this:
+If the treasury is short when the second one runs, the result is this:
 
 \`\`\`
 ✔ bob: return 296.5 HBOND to the issuer: tesSUCCESS
@@ -225,13 +225,13 @@ It ran like this:
   BOB now holds 0 HBOND
 \`\`\`
 
-The treasury didn't have 29,650 USD. BOB had given up his bonds and received nothing. Two separate transactions are **not atomic**: the first can succeed and the second fail, and then someone is owed money and has to trust the issuer to pay it. (We paid BOB by hand afterwards. On mainnet that's a default.)
+BOB has given up his bonds and received nothing. Two separate transactions are **not atomic**: the first can succeed and the second fail, and the holder is left trusting the issuer to pay. On mainnet that is a default. Don't redeem with two payments.
 
-### The fix: let the DEX do delivery versus payment
+### The correct design: delivery versus payment on the DEX
 
 At maturity, the treasury posts **one standing bid** for the whole outstanding supply at face value: "I give 100 USD for each HBOND". Each holder sells into it with Fill or Kill. HBOND and USD swap in the **same** transaction: full principal, or nothing moves.
 
-In the verification run, the window first **refused to open**: the treasury had spent part of the money raised (coupons, the reserve) and was short. Once the asset-sale proceeds arrived, it opened and both holders redeemed:
+Before opening the window, make sure the treasury can pay the **whole** principal. By maturity it has usually spent part of what it raised (on the asset, coupons, the reserve), so the principal comes from selling or refinancing the asset. \`44-redemption-window.js\` refuses to open until the money is there. Here it refuses, the asset-sale proceeds arrive, and then both holders redeem:
 
 \`\`\`
 Outstanding: 810 HBOND. Principal due: 81000 USD. Treasury holds 5101.25 USD unlocked.

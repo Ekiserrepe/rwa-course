@@ -1,6 +1,9 @@
 // 00-look-around.js: read the network and an account without spending anything
 //   node 00-look-around.js [rAddress]
 // Reading uses requests (free). Only transactions change the ledger (and cost a fee).
+//
+// Run first (from examples/):
+//   node 01-create-accounts.js
 const { dropsToXah } = require("xahau");
 const { connect, wallet, NETWORK } = require("./lib/xahau");
 

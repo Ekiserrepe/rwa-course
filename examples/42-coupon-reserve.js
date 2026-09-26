@@ -7,6 +7,17 @@
 //
 // First, it tries the same with HBOND to show the catch: Xahau refuses to
 // lock a token whose issuer has clawback enabled (tecNO_PERMISSION).
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 30-stablecoin-setup.js
+//   node 31-primary-offer.js 5000 100
+//   node 33-subscribe.js ALICE 20
+//   node 33-subscribe.js BOB 30 100
 const { connect, wallet, submit, bond, usd } = require("./lib/xahau");
 
 const RIPPLE_EPOCH = 946684800; // ledger time counts seconds from 2000-01-01

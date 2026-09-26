@@ -3,6 +3,10 @@
 //
 // There is no "mint" for fungible tokens: an issuer creates them by paying
 // them out, and destroys them when they are paid back.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
 const { connect, wallet, submit, trustLine, BOND_CODE, bond } = require("./lib/xahau");
 
 async function main() {

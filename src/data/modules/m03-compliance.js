@@ -23,7 +23,7 @@ export default {
 
 Any other term: see the [Glossary](?m=0&l=9).
 
-With \`RequireAuth\` on the issuer (Module 2), the trust line **is** the KYC allowlist. There is no separate list to keep in sync: an account either has an authorised line or it can't hold HBOND.
+With \`RequireAuth\` on the issuer ([Module 2](?m=2&l=0)), the trust line **is** the KYC allowlist. There is no separate list to keep in sync: an account either has an authorised line or it can't hold HBOND.
 
 ### The flow
 
@@ -42,16 +42,29 @@ BOB: trust line limit 100000, balance 0, authorised: true
 CAROL: trust line limit 100000, balance 0, authorised: false
 \`\`\`
 
+### Getting HBOND to approved investors
+
+The investors receive HBOND from the TREASURY, which holds the supply the issuer paid it in [Module 2](?m=2&l=2) (\`13-issue-supply.js\`). If the treasury's balance is 0, run that script first. \`21-transfer.js\` then moves HBOND between any two accounts:
+
+\`\`\`
+✔ treasury -> alice: 500 HBOND: tesSUCCESS
+  TREASURY 9500
+  ALICE    500
+✔ treasury -> bob: 300 HBOND: tesSUCCESS
+  TREASURY 9200
+  BOB      300
+\`\`\`
+
 ### What an unapproved account can't do
 
-We tried every door with CAROL, whose line exists but was never approved:
+CAROL's line exists but was never approved, so every route to her fails:
 
 \`\`\`
 ✘ treasury -> carol: 10 HBOND: tecPATH_DRY
 ✘ issuer -> carol (not authorised) directly: tecPATH_DRY
 \`\`\`
 
-Not even the issuer can pay her. And, as Module 4 shows, she can't even place an order to buy it (\`tecNO_AUTH\`). Meanwhile approved holders trade freely with each other:
+Not even the issuer can pay her. And, as [Module 4](?m=4&l=2) shows, she can't even place an order to buy it (\`tecNO_AUTH\`). Meanwhile approved holders trade freely with each other:
 
 \`\`\`
 ✔ alice -> bob: 50 HBOND: tesSUCCESS
@@ -105,7 +118,7 @@ Not even the issuer can pay her. And, as Module 4 shows, she can't even place an
 
 ### What each one really does
 
-We tested every direction on testnet, with ALICE as the frozen holder:
+With ALICE as the frozen holder, each direction behaves like this:
 
 | Action | Regular freeze | Deep freeze |
 |---|---|---|
@@ -185,7 +198,7 @@ The pattern is the same as a single freeze: **only the issuer's own flows** keep
 
 ### Can't undo "never freeze"
 
-If an issuer has set **NoFreeze**, it can no longer freeze individual lines, and a global freeze becomes a one-way switch: it can still be turned **on**, but never **off** again (xahaud, like rippled, silently ignores \`ClearFlag: 7\` once NoFreeze is set: the transaction returns \`tesSUCCESS\` and the flag stays on, the same kind of silent trap as Module 2's flag 16). An emergency stop would then halt the token forever. That is why the preflight check in Module 11 treats "NoFreeze is off" as a blocker for a regulated token.
+If an issuer has set **NoFreeze**, it can no longer freeze individual lines, and a global freeze becomes a one-way switch: it can still be turned **on**, but never **off** again (xahaud, like rippled, silently ignores \`ClearFlag: 7\` once NoFreeze is set: the transaction returns \`tesSUCCESS\` and the flag stays on, the same kind of silent failure as sending flag 16 for clawback, see [Module 2](?m=2&l=0)). An emergency stop would then halt the token forever. That is why the preflight check in [Module 11](?m=11&l=3) treats "NoFreeze is off" as a blocker for a regulated token.
 
 ### In the Xahau docs
 
@@ -215,7 +228,7 @@ If an issuer has set **NoFreeze**, it can no longer freeze individual lines, and
 ### When an RWA needs it
 
 - A **court order** transfers a holding (inheritance, divorce, insolvency).
-- An investor **lost their keys**: claw back from the old account, re-issue to a new, re-verified one. The capstone (Module 10) does exactly this.
+- An investor **lost their keys**: claw back from the old account, re-issue to a new, re-verified one. The capstone ([Module 10](?m=10&l=3)) does exactly this.
 - A **mistaken** or **fraudulent** transfer has to be reversed to match the legal register.
 
 ### The transaction
@@ -237,13 +250,13 @@ Careful with \`Amount.issuer\`: in a Clawback it holds the **holder's** address,
 
 ### Preconditions
 
-- The issuer must have set \`asfAllowTrustLineClawback\` (**17 on Xahau**) **before** it owned any ledger objects, trust lines included (Module 2), and without NoFreeze set. You can't add it later.
+- The issuer must have set \`asfAllowTrustLineClawback\` (**17 on Xahau**) **before** it owned any ledger objects, trust lines included ([Module 2](?m=2&l=0)), and without NoFreeze set. You can't add it later.
 - Once set, it can **never** be turned off. Investors can check it, so your terms must say when you'll use it.
 - It works on frozen lines too. The usual sequence for a lost key is freeze → claw back → re-issue.
 
 ### The price of clawback: no token escrow
 
-On Xahau, **an issuer that can claw back can't have its token locked in escrow**. We found this when our lock-up escrow of HBOND failed with \`tecNO_PERMISSION\`; xahaud's source code refuses to create a locked balance when the issuer has clawback enabled, since a clawback could otherwise pull tokens out from under an escrow. Module 5 shows the alternatives. Decide which you need, clawback or token escrow, **before** you set up the issuer.
+On Xahau, **an issuer that can claw back can't have its token locked in escrow**: an \`EscrowCreate\` of such a token fails with \`tecNO_PERMISSION\`. xahaud refuses to create a locked balance when the issuer has clawback enabled, since a clawback could otherwise pull tokens out from under an escrow. [Module 5](?m=5&l=2) shows the alternatives. Decide which you need, clawback or token escrow, **before** you set up the issuer.
 
 ### In the Xahau docs
 
@@ -300,7 +313,7 @@ BOB is a fully approved HBOND holder, but the treasury didn't list him, so his p
 
 ### Related: refusing incoming objects
 
-Xahau also has \`asfDisallowIncomingTrustline\`, \`asfDisallowIncomingCheck\`, \`asfDisallowIncomingPayChan\` and \`asfDisallowIncomingRemit\` (the flag 16 from Module 2's trap). They stop other accounts from creating those objects against yours, which keeps spam out of an issuer's directory.
+Xahau also has \`asfDisallowIncomingTrustline\`, \`asfDisallowIncomingCheck\`, \`asfDisallowIncomingPayChan\` and \`asfDisallowIncomingRemit\` (flag 16, which [Module 2](?m=2&l=0) warns not to confuse with clawback). They stop other accounts from creating those objects against yours, which keeps spam out of an issuer's directory.
 
 ### In the Xahau docs
 

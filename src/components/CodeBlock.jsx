@@ -6,6 +6,7 @@ import bash from 'react-syntax-highlighter/dist/esm/languages/prism/bash'
 import cLang from 'react-syntax-highlighter/dist/esm/languages/prism/c'
 import json from 'react-syntax-highlighter/dist/esm/languages/prism/json'
 import markup from 'react-syntax-highlighter/dist/esm/languages/prism/markup'
+import toml from 'react-syntax-highlighter/dist/esm/languages/prism/toml'
 import { CheckIcon } from './Brand'
 
 /**
@@ -19,6 +20,7 @@ SyntaxHighlighter.registerLanguage('sh', bash)
 SyntaxHighlighter.registerLanguage('c', cLang)
 SyntaxHighlighter.registerLanguage('json', json)
 SyntaxHighlighter.registerLanguage('html', markup)
+SyntaxHighlighter.registerLanguage('toml', toml)
 
 /**
  * Language badges: a monospace tag rather than a coloured chip, so a page
@@ -33,6 +35,8 @@ const LANG_LABEL = {
   python: 'Python',
   json: 'JSON',
   html: 'HTML',
+  toml: 'TOML',
+  text: 'Text',
   css: 'CSS',
 }
 
@@ -50,7 +54,7 @@ function CopyIcon({ size = 12 }) {
  * The contrast is deliberate: code is the one place on the page allowed to
  * go dark, which makes snippets scannable without any extra decoration.
  */
-export default function CodeBlock({ block, lang, labels }) {
+export default function CodeBlock({ block, lang, labels, id, highlighted = false }) {
   const [copied, setCopied] = useState(false)
 
   const code =
@@ -72,11 +76,15 @@ export default function CodeBlock({ block, lang, labels }) {
 
   return (
     <figure
+      id={id}
       className="m-0 rounded-2xl overflow-hidden"
       style={{
         background: 'var(--color-code-bg)',
         border: '1px solid var(--color-code-border)',
-        boxShadow: 'var(--shadow-soft)',
+        // A theory link landed here: ring it for a moment
+        boxShadow: highlighted ? '0 0 0 3px var(--xahau-green), var(--shadow-soft)' : 'var(--shadow-soft)',
+        transition: 'box-shadow 0.6s ease',
+        scrollMarginTop: 96,
       }}
     >
       <figcaption

@@ -127,10 +127,12 @@ await step("m7 61 stale", ["61-read-nav.js", "", "1"], [/STALE/], { exit: 2 });
 await step("m8 70 signer list", ["70-multisig-setup.js"], [/✔ issuer: 2-of-3 signer list: tesSUCCESS/, /quorum 2, 3 signers/]);
 await step("m8 71 multisig freeze", ["71-multisig-freeze.js", "CAROL"], [/✔ freeze carol \(CFO \+ COUNSEL\): tesSUCCESS/, /frozen = true/]);
 await step("m8 71 multisig unfreeze", ["71-multisig-freeze.js", "CAROL", "--off"], [/frozen = false/]);
+await step("m8 72 disable master", ["72-disable-master.js"], [/tecNO_ALTERNATIVE_KEY/, /✔ disable master, with signer list: tesSUCCESS/, /master key after disabling → tefMASTER_DISABLED/]);
 
 // ── Module 9: Hooks ─────────────────────────────────────────────────────────
 await step("m9 who sees what", ["hooks/who-sees-what.js"], [/✔ alice -> bob 1 HBOND: tesSUCCESS/, /✘ alice -> issuer 1 HBOND: tecHOOK_REJECTED/]);
 await step("m9 install desk", ["hooks/install-subscription-desk.js", "100"], [/✔ install subscription_desk: tesSUCCESS/]);
+await step("m9 prepare alice (already set up)", ["hooks/prepare-subscriber.js", "ALICE"], [/ALICE: HBOND line authorised: true/, /ALICE: [\d.]+ USD/]);
 await step("m9 desk: alice subscribes", ["hooks/subscribe-via-desk.js", "ALICE", "1000"], [/subscription accepted/, /ALICE: 478 -> 488 HBOND/]);
 await step("m9 desk: carol refused", ["hooks/subscribe-via-desk.js", "CAROL", "1000"], [/tecHOOK_REJECTED.*KYC pending/]);
 await step("m9 desk: partial refused", ["hooks/subscribe-via-desk.js", "BOB", "500", "--partial"], [/partial payments are refused/]);
@@ -146,6 +148,23 @@ await step("m9 over cap on the DEX", ["33-subscribe.js", "ALICE", "1"], [/✔ .*
 await sleep(8000);
 await step("m9 unfreeze alice again", ["22-freeze.js", "ALICE", "--off"], [/frozen by issuer = false/]);
 await step("m9 remove cap", ["hooks/install-holding-cap.js", "--remove"], [/✔ remove holding_cap: tesSUCCESS/]);
+// The lockbox: a time lock for HBOND, which EscrowCreate refuses (Module 5).
+// Every balance ends where it started, so Module 5's maturity numbers hold.
+await step("m9 install lockbox", ["hooks/install-lockbox.js"], [/✔ issuer: authorise vault: tesSUCCESS/, /✔ install lockbox: tesSUCCESS/]);
+const lockup = await step("m9 bob locks 20 for himself", ["hooks/lock-tokens.js", "BOB", "BOB", "20", "40"], [/✔ .*tesSUCCESS.*Lock: tokens locked/]);
+const lockupId = grab(lockup, /lock ([0-9A-F]{64})/);
+await step("m9 lock for carol refused", ["hooks/lock-tokens.js", "ALICE", "CAROL", "5", "40"], [/tecHOOK_REJECTED.*no authorised trust line/]);
+await step("m9 vault can't spend", ["21-transfer.js", "VAULT", "BOB", "1"], [/tecHOOK_REJECTED.*only through a release/]);
+await step("m9 release too early", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*too early/]);
+const disputed = await step("m9 alice locks 10 for bob", ["hooks/lock-tokens.js", "ALICE", "BOB", "10", "3600"], [/✔ .*tesSUCCESS.*Lock: tokens locked/]);
+const disputedId = grab(disputed, /lock ([0-9A-F]{64})/);
+await step("m9 clawback from the vault", ["24-clawback.js", "VAULT", "10"], [/✔ claw back 10 HBOND from vault: tesSUCCESS/, /VAULT: 30 -> 20 HBOND/]);
+await step("m9 only the issuer voids", ["hooks/release-lock.js", "BOB", disputedId, "--void"], [/tecHOOK_REJECTED.*only the token's issuer/]);
+await step("m9 issuer voids", ["hooks/release-lock.js", "ISSUER", disputedId, "--void"], [/✔ .*tesSUCCESS.*voided by the issuer/]);
+await step("m9 reissue to alice", ["21-transfer.js", "ISSUER", "ALICE", "10"], [/✔ .*tesSUCCESS/]);
+await sleep(40_000);
+await step("m9 release", ["hooks/release-lock.js", "ALICE", lockupId], [/✔ .*tesSUCCESS.*Lock: released/, /beneficiary: \d+(\.\d+)? -> \d+(\.\d+)? HBOND/, /vault holds 0 HBOND/]);
+await step("m9 released only once", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*no such lock/]);
 
 // ── Module 5 (end of life) ──────────────────────────────────────────────────
 // The principal comes from selling the asset (Module 5, lesson 4): STABLE wires it

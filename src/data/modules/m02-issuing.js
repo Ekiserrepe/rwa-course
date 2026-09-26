@@ -32,7 +32,7 @@ An issuer's most important settings can only be turned on **while the account ow
 | **AllowTrustLineClawback** | \`SetFlag: 17\` **on Xahau** | Recover tokens after a court order or lost key | **Never**, once on. Can only be turned on while the account owns no objects, and not if NoFreeze is set |
 | **DefaultRipple** | \`SetFlag: 8\` | Holders can trade with each other | Yes |
 | **Domain** | \`Domain: hex("harbor-bond.example")\` | Links the account to the issuer's website | Yes |
-| **TransferRate** | \`TransferRate: 0\` (none) | A fee on holder-to-holder transfers. With one, every such payment needs a \`SendMax\` (Module 4) | Yes |
+| **TransferRate** | \`TransferRate: 0\` (none) | A fee on holder-to-holder transfers. With one, every such payment needs a \`SendMax\` ([Module 4](?m=4&l=3)) | Yes |
 | **TickSize** | \`TickSize: 5\` | DEX prices keep 5 significant digits | Yes |
 
 Flags go one per \`AccountSet\`; fields like \`Domain\` can go together.
@@ -40,6 +40,10 @@ Flags go one per \`AccountSet\`; fields like \`Domain\` can go together.
 ### Note: the clawback flag has a different number on Xahau
 
 On the XRP Ledger, \`asfAllowTrustLineClawback\` is **16**. On Xahau, **16 is \`asfDisallowIncomingRemit\`**, and clawback is **17**.
+
+### If a trust line already exists
+
+\`10-issuer-setup.js\` checks this before sending anything. If some account has already opened a trust line to the issuer, for example an investor script run before this one, it stops and lists the lines in the way. Turning the lines' limits to 0 isn't enough on its own; a line disappears only when every setting on it is back to its default. For the course's own roles, \`node 10-issuer-setup.js --remove-empty-lines\` has each role holding nothing remove its line (limit 0 with \`tfSetNoRipple\`), then configures the issuer. A line that holds tokens can't be removed this way: start over with a new issuer (\`01-create-accounts.js\`).
 
 ### What not to set
 
@@ -161,7 +165,7 @@ To hold HBOND, an account needs a trust line to the issuer. With \`RequireAuth\`
    \`\`\`
    Notice the swap: in the issuer's \`TrustSet\`, the \`issuer\` field holds the **other** account. \`LimitAmount\` always describes the line from the signer's side, and the issuer's limit is 0 because it doesn't want to hold its own token.
 
-Approval is permanent: there is no "un-authorise". To stop a holder later, you freeze them (Module 3).
+Approval is permanent: there is no "un-authorise". To stop a holder later, you freeze them ([Module 3](?m=3&l=1)).
 
 ### Issuing = paying
 
@@ -230,7 +234,7 @@ The trust line's reserve (0.2 XAH) is paid by the account that created it with a
 - \`balances\`: what each hot wallet holds. For a bond, the unsold part.
 - \`frozen_balances\`: amounts on frozen lines.
 
-After investors bought some HBOND (Module 3 onwards), the report read:
+After investors bought some HBOND ([Module 3](?m=3&l=0) onwards), the report read:
 
 \`\`\`
 HBOND outside the treasury: 800
@@ -248,7 +252,7 @@ HBOND in the treasury:        9200
 
 Keep two things in mind when you use this as a register:
 
-- Results come in **pages** (\`marker\`). Module 5's snapshot pins one ledger index so every page describes the same moment.
+- Results come in **pages** (\`marker\`). [Module 5's snapshot](?m=5&l=0) pins one ledger index so every page describes the same moment.
 - A line with balance 0 is not a holder, but it may be a pending KYC request (CAROL above).
 
 ### In the Xahau docs
@@ -302,7 +306,7 @@ Xahau lets an account owner write **Remarks** on its own \`AccountRoot\`. Anyone
   token              48424F4E44000000000000000000000000000000 (HBOND): 100 USD face, 5% fixed, matures 2030-06-30  (immutable)
 \`\`\`
 
-- \`prospectus_sha256\` is the **fingerprint** of the prospectus file. Anyone holding a copy can hash it and compare: if the numbers match, it is the exact document the issuer committed to. Module 6 explains fingerprints in detail.
+- \`prospectus_sha256\` is the **fingerprint** of the prospectus file. Anyone holding a copy can hash it and compare: if the numbers match, it is the exact document the issuer committed to. [Module 6](?m=6&l=1) explains fingerprints in detail.
 - \`status\` stays mutable: the capstone moves it from "offering open" to "matured and fully redeemed".
 
 Rules: up to 32 remarks per object, names and values up to 256 bytes, **immutable remarks can't be changed or deleted**, and each byte costs one extra drop of fee.
@@ -318,6 +322,11 @@ Rules: up to 32 remarks per object, names and values up to 256 bytes, **immutabl
           title: { en: "examples/15-issuer-profile.js" },
           language: "javascript",
           code: example("15-issuer-profile.js"),
+        },
+        {
+          title: { en: "examples/assets/xahau.toml" },
+          language: "toml",
+          code: example("assets/xahau.toml"),
         },
       ],
       slides: [

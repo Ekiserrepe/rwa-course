@@ -48,7 +48,7 @@ On mainnet you pick an existing, regulated stablecoin, and that choice carries r
 
 - **Issuer risk**: the stablecoin is a claim on its issuer. If it fails, your investors' cash does too.
 - **Its controls apply to you**: if the stablecoin issuer can freeze or claw back (many can), it can freeze your treasury's cash.
-- **Identity**: "USD" alone means nothing. Always pin \`{ currency, issuer }\`, exactly as your investors must pin HBOND's issuer (Module 2).
+- **Identity**: "USD" alone means nothing. Always pin \`{ currency, issuer }\`, exactly as your investors must pin HBOND's issuer ([Module 2](?m=2&l=1)).
 
 ### In the Xahau docs
 
@@ -106,7 +106,7 @@ Each offer has a \`quality\`, \`TakerPays / TakerGets\` in the offer's own units
 
 ### Why an offer, and not "send us money"?
 
-With a plain "pay us and we'll send you tokens" process, there's a moment when the investor has paid and doesn't have the tokens yet, and the issuer has to be trusted to deliver. An offer on the DEX is **delivery versus payment**: the investor's USD and the treasury's HBOND swap in the same transaction, or nothing happens. Module 9 shows how a Hook can give the "pay us" flow the same guarantee.
+With a plain "pay us and we'll send you tokens" process, there's a moment when the investor has paid and doesn't have the tokens yet, and the issuer has to be trusted to deliver. An offer on the DEX is **delivery versus payment**: the investor's USD and the treasury's HBOND swap in the same transaction, or nothing happens. [Module 9](?m=9&l=1) shows how a Hook can give the "pay us" flow the same guarantee.
 
 ### The offer only sells what the treasury holds
 
@@ -230,7 +230,7 @@ The book now has two sellers. Buyers get the treasury's 100 USD offer first beca
 
 ### The issuer's levers on secondary trading
 
-- **TransferRate**: a fee on every transfer between two non-issuer accounts, set in billionths: \`TransferRate: 1002000000\` is 0.2%. The fee isn't paid to anyone: the extra tokens go back to the issuer, which destroys them. We tested it with a scratch issuer at 0.2%:
+- **TransferRate**: a fee on every transfer between two non-issuer accounts, set in billionths: \`TransferRate: 1002000000\` is 0.2%. The fee isn't paid to anyone: the extra tokens go back to the issuer, which destroys them. With a test issuer at 0.2%:
 
   \`\`\`
   ✘ T -> A 100, no SendMax: tecPATH_PARTIAL
@@ -241,7 +241,7 @@ The book now has two sellers. Buyers get the treasury's 100 USD offer first beca
   \`\`\`
 
   Three things to know. A payment between holders now **needs a \`SendMax\`** that covers the fee, or it fails; \`21-transfer.js\` reads the issuer's rate and adds one. Payments to or from the issuer pay no fee. On the DEX, the **seller** pays it: the treasury gave 10.02 to deliver 10. That includes the treasury's own primary sales, since the treasury isn't the issuer. Many RWA issuers leave it at 0 and charge fees off the ledger.
-- **TickSize**: how many significant digits offer prices keep (Module 2 set 5). Fewer digits means a tidier book and less "penny-jumping".
+- **TickSize**: how many significant digits offer prices keep ([Module 2](?m=2&l=0) set 5). Fewer digits means a tidier book and less "penny-jumping".
 - **Freeze**: a frozen holder's offers can't be filled, since the holder can't send.
 - **RequireAuth**: only approved accounts can be on either side, as lesson 3 showed.
 

@@ -4,6 +4,9 @@
 // OracleSet creates or updates an Oracle object owned by the publisher, here
 // the ISSUER acting as its own fund administrator. Prices are integers with a
 // Scale: 100.37 is AssetPrice 10037, Scale 2.
+//
+// Run first (from examples/):
+//   node 01-create-accounts.js
 const { connect, wallet, submit, toHex, BOND_CODE } = require("./lib/xahau");
 
 const DOCUMENT_ID = 1; // one publisher can own several oracles, told apart by this

@@ -36,17 +36,17 @@ Everything that happens **after** the claim exists gets faster, cheaper and more
 
 | Without a ledger | With a token on Xahau |
 |---|---|
-| A registrar keeps the list of holders in a private database | The list is the ledger: anyone can read it (Module 5) |
-| Settlement takes days; payment and delivery happen separately | Asset and payment swap in one transaction, in seconds (Module 4) |
-| Coupons go through several banks | The issuer pays every holder directly, with a verifiable record (Module 5) |
-| Restrictions ("only verified investors") are checked by hand | The ledger refuses unapproved holders on its own (Module 3) |
-| An auditor asks for statements | The auditor reads supply, holders and history directly (Module 2) |
+| A registrar keeps the list of holders in a private database | The list is the ledger: anyone can read it ([Module 5](?m=5&l=0)) |
+| Settlement takes days; payment and delivery happen separately | Asset and payment swap in one transaction, in seconds ([Module 4](?m=4&l=2)) |
+| Coupons go through several banks | The issuer pays every holder directly, with a verifiable record ([Module 5](?m=5&l=1)) |
+| Restrictions ("only verified investors") are checked by hand | The ledger refuses unapproved holders on its own ([Module 3](?m=3&l=0)) |
+| An auditor asks for statements | The auditor reads supply, holders and history directly ([Module 2](?m=2&l=3)) |
 
 ### What tokenization does not change
 
 - **The asset's risk.** A bad building is a bad token.
 - **The need to trust the issuer and custodian.** The ledger proves who holds tokens; it cannot prove the warehouse exists.
-- **The law.** A tokenized bond is still a bond. Securities rules, investor protection and tax apply as they would without a ledger (Module 11).
+- **The law.** A tokenized bond is still a bond. Securities rules, investor protection and tax apply as they would without a ledger ([Module 11](?m=11&l=1)).
 
 ### Kinds of RWA you will meet
 
@@ -97,18 +97,18 @@ The most important legal question for a developer: **if the ledger and a paper r
 - In some jurisdictions the law lets a ledger **be** the official register of a security. Then a token transfer **is** the legal transfer.
 - In others the token is only **evidence**, and an off-ledger register (kept by a transfer agent) is authoritative. Then the ledger must be kept in sync with it, and the issuer must be able to **correct** the ledger when the register says so.
 
-That second case is why RWA tokens need powers that ordinary cryptocurrencies don't: approving holders, freezing, and taking tokens back after a court order or a lost key (Module 3). They are not there to let the issuer misbehave; they are there so the ledger can follow the law.
+That second case is why RWA tokens need powers that ordinary cryptocurrencies don't: approving holders, freezing, and taking tokens back after a court order or a lost key ([Module 3](?m=3&l=3)). They are not there to let the issuer misbehave; they are there so the ledger can follow the law.
 
 ### What the terms must say about the token
 
 Good tokenization terms answer, explicitly:
 
-- Who the **issuer account** is (its address), so nobody can pass off another token as the real one (Module 2).
-- That holders must pass **KYC** and that unapproved accounts can't hold (Module 3).
-- When and why the issuer may **freeze** or **claw back** (Module 3).
-- How and when **payments** are made, and what counts as the record date (Module 5).
-- How **redemption** works at maturity (Module 5).
-- What happens if a holder **loses their key** (Module 10's incident).
+- Who the **issuer account** is (its address), so nobody can pass off another token as the real one ([Module 2](?m=2&l=4)).
+- That holders must pass **KYC** and that unapproved accounts can't hold ([Module 3](?m=3&l=0)).
+- When and why the issuer may **freeze** or **claw back** ([Module 3](?m=3&l=1)).
+- How and when **payments** are made, and what counts as the record date ([Module 5](?m=5&l=0)).
+- How **redemption** works at maturity ([Module 5](?m=5&l=3)).
+- What happens if a holder **loses their key** ([Module 10's incident](?m=10&l=3)).
 
 ### What never goes on the ledger
 
@@ -143,7 +143,7 @@ What makes it a strong fit for RWAs is built into the ledger, no smart contract 
 - **Freeze** of one holder, of all holders, or a **deep freeze**.
 - **Clawback**: the issuer can take tokens back.
 - **DEX trading** against any other token, with delivery versus payment.
-- **Escrow** and **payment channels** for tokens (with a catch, Module 5).
+- **Escrow** and **payment channels** for tokens (with a catch, [Module 5](?m=5&l=2)).
 - **Transfer fees** and **tick size** set by the issuer.
 
 ### URITokens for unique assets
@@ -166,7 +166,7 @@ Issuer account remarks: "collateral: <deed ID>"
 HBOND issued token (10,000 units held by investors)
 \`\`\`
 
-One unique token proves **what** the SPV owns; the fungible token divides the claim on it among investors. Module 6 builds exactly this link on the ledger, so a reader starting from either side finds the other.
+One unique token proves **what** the SPV owns; the fungible token divides the claim on it among investors. [Module 6](?m=6&l=4) builds exactly this link on the ledger, so a reader starting from either side finds the other.
 
 ### Comparison
 
@@ -219,7 +219,7 @@ Xahau shares the XRP Ledger's issued tokens and their controls, but not everythi
 | **KYC provider** | Checks identities, tells the issuer who may be approved | No: off-ledger |
 | **Transfer agent / registrar** | Keeps the legal register, if the ledger isn't it | Sometimes: reads the ledger, may trigger actions |
 | **Custodian / trustee** | Holds the asset or cash for holders | Sometimes: may hold stablecoin reserves |
-| **Administrator / oracle** | Calculates and publishes NAV | Yes: an oracle object (Module 7) |
+| **Administrator / oracle** | Calculates and publishes NAV | Yes: an oracle object ([Module 7](?m=7&l=0)) |
 | **Stablecoin issuer** | Provides the settlement currency | Yes: a separate issuer |
 | **Auditor / regulator** | Checks everything | Reads only |
 
@@ -227,7 +227,7 @@ Xahau shares the XRP Ledger's issued tokens and their controls, but not everythi
 
 Never use the issuer account for day-to-day work. The course follows the standard split:
 
-- **ISSUER (cold)**: sets the token's rules, approves holders, freezes, claws back, signs rarely. Its key(s) can create unlimited tokens, so they live offline and, in production, behind multisig (Module 8).
+- **ISSUER (cold)**: sets the token's rules, approves holders, freezes, claws back, signs rarely. Its key(s) can create unlimited tokens, so they live offline and, in production, behind multisig ([Module 8](?m=8&l=1)).
 - **TREASURY (hot)**: receives the whole supply once, then does the frequent work: selling, paying coupons, running the redemption window. If its key leaks, the damage is limited to what it holds, and the issuer can freeze it.
 
 \`\`\`
@@ -287,7 +287,7 @@ Because the issuer account can never be replaced: the token **is** "currency X f
 |---|---|---|
 | Buy from the issuer 24/7 at a fixed price | A Hook on the treasury that sells on payment | Only for payments **to** the treasury |
 | No investor holds more than X% | A Hook on the issuer | It can't block a transfer between two holders: it can only react afterwards (freeze) |
-| Lock-up periods | Escrow, or a freeze until a date | Escrow of the token is impossible if clawback is on (Module 5) |
+| Lock-up periods | Escrow, or a freeze until a date | Escrow of the token is impossible if clawback is on ([Module 5](?m=5&l=2)) |
 
 ### Only the law can keep
 

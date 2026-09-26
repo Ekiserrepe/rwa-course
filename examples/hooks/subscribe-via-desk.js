@@ -2,6 +2,16 @@
 //   node hooks/subscribe-via-desk.js <ROLE> <amountUSD> [--partial]
 //
 // --partial sends the payment with tfPartialPayment, which the desk refuses.
+// The role needs USD and an authorised HBOND trust line first: if the desk
+// refuses for either, run hooks/prepare-subscriber.js <ROLE>.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 30-stablecoin-setup.js
+//   node hooks/install-subscription-desk.js
+//   node hooks/prepare-subscriber.js ALICE
 const { connect, wallet, submit, trustLine, usd, BOND_CODE } = require("../lib/xahau");
 
 const tfPartialPayment = 0x00020000;

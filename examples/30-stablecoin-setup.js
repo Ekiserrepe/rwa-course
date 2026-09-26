@@ -5,6 +5,9 @@
 // DefaultRipple on, no RequireAuth, so anyone may hold it. The TREASURY and
 // the investors open USD trust lines, and STABLE pays each investor 10,000 USD,
 // as if they had wired dollars to it.
+//
+// Run first (from examples/):
+//   node 01-create-accounts.js
 const { connect, wallet, submit, trustLine, usd } = require("./lib/xahau");
 
 async function main() {

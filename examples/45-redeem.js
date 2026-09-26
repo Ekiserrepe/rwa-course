@@ -4,6 +4,18 @@
 // tfFillOrKill: the whole balance at face value, or nothing. The tokens and
 // the principal cross in one transaction, so the holder can never end up
 // without both.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 30-stablecoin-setup.js
+//   node 31-primary-offer.js 5000 100
+//   node 33-subscribe.js ALICE 20
+//   node 33-subscribe.js BOB 30 100
+//   node 44-redemption-window.js
 const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("./lib/xahau");
 
 const tfFillOrKill = 0x00040000;

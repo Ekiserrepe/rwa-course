@@ -1,5 +1,11 @@
 // lib/xahau.js: the few helpers every script in this course shares.
-require("dotenv").config();
+const path = require("path");
+
+// examples/, wherever a script is run from: `node hooks/x.js` from examples/
+// and `node x.js` from examples/hooks/ must find the same .env.
+const EXAMPLES_DIR = path.join(__dirname, "..");
+const ENV_FILE = path.join(EXAMPLES_DIR, ".env");
+require("dotenv").config({ path: ENV_FILE });
 const { Client, Wallet } = require("xahau");
 
 const NETWORK = process.env.NETWORK || "wss://xahau-test.net";
@@ -92,6 +98,6 @@ async function getObject(client, id) {
 }
 
 module.exports = {
-  NETWORK, toHex, fromHex, currencyCode, currencyName, wallet,
+  EXAMPLES_DIR, ENV_FILE, NETWORK, toHex, fromHex, currencyCode, currencyName, wallet,
   BOND_CODE, bond, usd, connect, submit, trustLine, getObject,
 };

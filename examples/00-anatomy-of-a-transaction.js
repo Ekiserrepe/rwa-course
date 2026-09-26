@@ -3,6 +3,9 @@
 // ALICE sends 1 XAH to TREASURY. Every stage is printed so you can see what
 // you write, what the library adds, what signing produces and what the
 // network answers.
+//
+// Run first (from examples/):
+//   node 01-create-accounts.js
 const { xahToDrops } = require("xahau");
 const { connect, wallet } = require("./lib/xahau");
 

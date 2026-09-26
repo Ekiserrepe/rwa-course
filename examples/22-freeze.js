@@ -2,6 +2,15 @@
 //   node 22-freeze.js <ROLE>            freeze: the holder can only send back to the issuer
 //   node 22-freeze.js <ROLE> --deep     deep freeze: it can only deal with the issuer itself
 //   node 22-freeze.js <ROLE> --off      lift both
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 21-transfer.js TREASURY ALICE 500
+//   node 21-transfer.js TREASURY BOB 300
 const { connect, wallet, submit, trustLine, BOND_CODE } = require("./lib/xahau");
 
 const tf = {

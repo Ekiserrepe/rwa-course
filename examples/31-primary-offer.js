@@ -3,6 +3,12 @@
 //
 // One OfferCreate is the whole primary sale: "I give <amount> HBOND and want
 // <amount × price> USD". It rests on the order book until investors fill it.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 30-stablecoin-setup.js
 const { connect, wallet, submit, bond, usd } = require("./lib/xahau");
 
 async function main() {

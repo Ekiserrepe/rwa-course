@@ -4,6 +4,9 @@
 // Immutable remarks for what must never change (the parcel, the jurisdiction),
 // mutable ones for what does (the lien, the latest valuation). Only the
 // token's issuer can set them, whoever owns the token.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 51-mint-deed.js  (it prints the URITokenID to pass here)
 const { connect, wallet, submit, toHex, fromHex, getObject } = require("./lib/xahau");
 
 const remark = (name, value, immutable = false) => ({

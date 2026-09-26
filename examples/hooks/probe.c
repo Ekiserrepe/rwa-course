@@ -1,5 +1,6 @@
 // probe.c: roll back every transaction that reaches this account's Hook,
-// except the account's own. Used once to see who the ledger asks.
+// except the account's own. It shows which transactions the ledger runs
+// this Hook for, and whether its refusal counts.
 #include "hookapi.h"
 int64_t hook(uint32_t reserved)
 {

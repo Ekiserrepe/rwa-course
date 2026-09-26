@@ -7,6 +7,10 @@
 //   CAROL     someone who never passes KYC
 //   STABLE    issues the USD stablecoin that investors settle in
 const fs = require("fs");
+const path = require("path");
+
+// Always examples/.env, whichever folder this is run from
+const ENV_FILE = path.join(__dirname, ".env");
 
 const ROLES = ["ISSUER", "TREASURY", "ALICE", "BOB", "CAROL", "STABLE"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -29,11 +33,11 @@ async function main() {
     lines.push(`${role}_SEED=${account.secret}`);
   }
   // Never lose earlier seeds silently: keep the previous file next to it
-  if (fs.existsSync(".env")) {
-    fs.copyFileSync(".env", ".env.bak");
+  if (fs.existsSync(ENV_FILE)) {
+    fs.copyFileSync(ENV_FILE, `${ENV_FILE}.bak`);
     console.log("\nPrevious .env kept as .env.bak");
   }
-  fs.writeFileSync(".env", lines.join("\n") + "\n");
+  fs.writeFileSync(ENV_FILE, lines.join("\n") + "\n");
   console.log("\nSaved to .env (testnet funds only, 1,000 XAH each).");
 }
 

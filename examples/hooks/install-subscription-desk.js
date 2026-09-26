@@ -1,6 +1,12 @@
 // install-subscription-desk.js: put the always-open issuance desk on the TREASURY
 //   node hooks/install-subscription-desk.js [priceUSD=100]
 //   node hooks/install-subscription-desk.js --remove
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 30-stablecoin-setup.js
 const { connect, wallet, BOND_CODE } = require("../lib/xahau");
 const { install, remove, currencyBytes, accountBytes, u32, param } = require("./lib");
 

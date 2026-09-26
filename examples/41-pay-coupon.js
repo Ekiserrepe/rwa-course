@@ -5,7 +5,22 @@
 // Resumable: each payment carries a memo with the record ledger, and holders
 // already paid for that ledger are skipped. Run it again after a crash and
 // nobody is paid twice.
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
+//   node 12-treasury-line.js
+//   node 13-issue-supply.js
+//   node 20-onboard-investor.js ALICE --approve
+//   node 20-onboard-investor.js BOB --approve
+//   node 30-stablecoin-setup.js
+//   node 31-primary-offer.js 5000 100
+//   node 33-subscribe.js ALICE 20
+//   node 33-subscribe.js BOB 30 100
+//   node 40-holder-snapshot.js --save
 const fs = require("fs");
+const path = require("path");
+
+const SNAPSHOT = path.join(__dirname, "snapshot.json");
 const { connect, wallet, submit, usd, toHex, fromHex } = require("./lib/xahau");
 
 async function alreadyPaid(client, payer, recordLedger) {
@@ -27,8 +42,8 @@ async function main() {
   const perUnit = Number(process.argv[2]);
   const dryRun = process.argv.includes("--dry-run");
   if (!(perUnit > 0)) throw new Error("Usage: 41-pay-coupon.js <USDperHBOND> [--dry-run]");
-  if (!fs.existsSync("snapshot.json")) throw new Error("Run 40-holder-snapshot.js --save first");
-  const { ledger, holders } = JSON.parse(fs.readFileSync("snapshot.json", "utf8"));
+  if (!fs.existsSync(SNAPSHOT)) throw new Error("Run 40-holder-snapshot.js --save first");
+  const { ledger, holders } = JSON.parse(fs.readFileSync(SNAPSHOT, "utf8"));
 
   const client = await connect();
   const payer = wallet("TREASURY_SEED");

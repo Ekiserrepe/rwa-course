@@ -4,16 +4,19 @@
 // Three signer keys are created offline (they need no XAH: signers never pay)
 // and saved to .env. SignerListSet makes any two of them enough to sign for
 // the issuer. The master key still works until you disable it (see lesson).
+//
+// Run first (from examples/):
+//   node 01-create-accounts.js
 const fs = require("fs");
 const { Wallet } = require("xahau");
-const { connect, wallet, submit } = require("./lib/xahau");
+const { connect, wallet, submit, ENV_FILE } = require("./lib/xahau");
 
 async function main() {
-  const env = fs.readFileSync(".env", "utf8");
+  const env = fs.readFileSync(ENV_FILE, "utf8");
   const officers = ["CFO", "COO", "COUNSEL"].map((role) => {
     const existing = process.env[`${role}_SEED`];
     const w = existing ? Wallet.fromSeed(existing, { algorithm: "secp256k1" }) : Wallet.generate("ecdsa-secp256k1");
-    if (!existing) fs.appendFileSync(".env", `${env.endsWith("\n") ? "" : "\n"}${role}_SEED=${w.seed}\n`);
+    if (!existing) fs.appendFileSync(ENV_FILE, `${env.endsWith("\n") ? "" : "\n"}${role}_SEED=${w.seed}\n`);
     console.log(`${role.padEnd(8)} ${w.address}${existing ? "" : "  (new, saved to .env)"}`);
     return w;
   });

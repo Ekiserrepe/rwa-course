@@ -3,6 +3,9 @@
 //
 // With RequireAuth on, a trust line exists in two steps: the holder asks
 // (TrustSet with a limit), then the issuer authorises (TrustSet with tfSetfAuth).
+//
+// Run first, once, in this order (from examples/, after 01-create-accounts.js):
+//   node 10-issuer-setup.js
 const { connect, wallet, submit, trustLine, BOND_CODE, bond } = require("./lib/xahau");
 
 const tfSetfAuth = 0x00010000;

@@ -45,7 +45,7 @@ and check that every amendment your flows depend on is \`"enabled": true\`.
 
 - **Issuer and treasury**: 1 XAH base reserve each, plus 0.2 XAH per object they own (signer list, oracle, offers, escrows, hooks).
 - **Each investor**: needs XAH for their own account (1 XAH) and their trust lines (0.2 XAH each, HBOND and USD), plus fees. Your onboarding has to tell them, or give it to them.
-- **Hooks**: executions raise the fee of the transactions that trigger them, and a collect call (Module 9) makes the **issuer** pay for every weak execution.
+- **Hooks**: executions raise the fee of the transactions that trigger them, and a collect call ([Module 9](?m=9&l=2)) makes the **issuer** pay for every weak execution.
 
 ### Investors sign in their own wallets
 
@@ -76,15 +76,15 @@ In the course, scripts sign for investors with seeds from \`.env\`. In productio
 A token that pays interest and principal, or a share of a company's profits, is almost always a **security** or financial instrument, whatever it's called. That decides:
 
 - **Who may buy it** (professional investors only? residents of which countries?). → Your KYC criteria and whether RequireAuth approval depends on investor category.
-- **Whether a prospectus is required**, and its disclosures. → The \`prospectus_sha256\` remark (Module 2).
+- **Whether a prospectus is required**, and its disclosures. → The \`prospectus_sha256\` remark ([Module 2](?m=2&l=4)).
 - **Who may operate the market**. Trading a security between investors may need a licensed venue in some jurisdictions. → Whether you let holders use the public DEX, or restrict secondary trading.
-- **Whether the ledger may be the legal register** (Module 1). → How much freeze and clawback you need.
+- **Whether the ledger may be the legal register** ([Module 1](?m=1&l=4)). → How much freeze and clawback you need.
 
 Regimes differ widely by country and change often. In the EU, for example, the crypto-asset regulation (MiCA, Regulation (EU) 2023/1114) explicitly **excludes** tokens that are financial instruments; those fall under existing securities law (MiFID II, the Prospectus Regulation), and a separate DLT Pilot Regime (Regulation (EU) 2022/858) covers trading and settlement infrastructure built on distributed ledgers. Other jurisdictions draw these lines differently. Ask, don't assume.
 
 ### Anti-money-laundering
 
-KYC at onboarding is the start: ongoing monitoring, sanctions screening of holders, and rules on transfers between parties may apply. Freeze and deep freeze (Module 3) are how a sanctions hit reaches the ledger; the decision process lives off it.
+KYC at onboarding is the start: ongoing monitoring, sanctions screening of holders, and rules on transfers between parties may apply. Freeze and deep freeze ([Module 3](?m=3&l=1)) are how a sanctions hit reaches the ledger; the decision process lives off it.
 
 ### Privacy
 
@@ -95,7 +95,7 @@ No personal data on the ledger: not in Remarks, memos, URIs or domain files. The
 - The issuer and treasury **addresses**, and that no other address issues the real token.
 - The ledger controls the issuer holds (approval, freeze, deep freeze, clawback, Hooks) and **when** it will use them.
 - The record-date rule and how payments are made.
-- What happens with lost keys, and what the issuer **cannot** recover (Module 10's incident).
+- What happens with lost keys, and what the issuer **cannot** recover ([Module 10's incident](?m=10&l=3)).
 - Where NAV and attestations are published, and by whom.`,
       },
       slides: [
@@ -119,7 +119,7 @@ No personal data on the ledger: not in Remarks, memos, URIs or domain files. The
 
 ### Keys
 
-- Issuer: signer list with separate people and devices (hardware wallets or an HSM), master key disabled after testing (Module 8).
+- Issuer: signer list with separate people and devices (hardware wallets or an HSM), master key disabled after testing ([Module 8](?m=8&l=3)).
 - Treasury: its own key or list, rotatable, holding only what operations need.
 - **No seed ever in a server's environment, a repository or a chat.** The course's \`.env\` is for testnet.
 
@@ -136,7 +136,7 @@ Every validated transaction touching them arrives as a message. Alert when:
 - the issuer signs **anything** you didn't schedule (above all: a Payment that creates supply, a Clawback, a flag change);
 - \`gateway_balances\` obligations change without a matching sale or redemption;
 - a trust line is frozen or unfrozen;
-- the NAV oracle hasn't been updated within its window (Module 7);
+- the NAV oracle hasn't been updated within its window ([Module 7](?m=7&l=1));
 - a Hook starts rejecting more than usual.
 
 ### Incident runbooks
@@ -147,7 +147,7 @@ Write them before launch, rehearse them on testnet, and keep them next to the si
 |---|---|
 | Treasury key leaked | Freeze the treasury's line; move funds; rotate |
 | Unexpected supply increase | Global freeze; investigate the issuer's signers |
-| Investor lost keys | Evidence, then freeze → clawback → KYC → re-issue (Module 10) |
+| Investor lost keys | Evidence, then freeze → clawback → KYC → re-issue ([Module 10](?m=10&l=3)) |
 | Sanctions hit on a holder | Deep freeze; follow the legal process |
 | Stablecoin issuer freezes the treasury's USD | Out of your hands: disclose, use another settlement asset |
 
@@ -167,7 +167,7 @@ The course's \`npm run verify\` reruns every script against testnet and checks e
       id: "m11l4",
       title: { en: "The Launch Checklist" },
       theory: {
-        en: `\`90-preflight.js\` reads an issuer account and reports what's ready, as **MUST** (don't launch without it), **SHOULD** (decide consciously) and **INFO**. Against the course's ISSUER after Module 8:
+        en: `\`90-preflight.js\` reads an issuer account and reports what's ready, as **MUST** (don't launch without it), **SHOULD** (decide consciously) and **INFO**. Against the course's ISSUER after [Module 8](?m=8&l=0):
 
 \`\`\`
   ✔ MUST   RequireAuth: only approved accounts can hold the token
@@ -219,8 +219,7 @@ Against the capstone's issuer, which never got a signer list, it says \`✘ MUST
 ### Where to go next
 
 - The [Xahau documentation](https://docs.xahau.network/) for every transaction and object used here.
-- [Learn URITokens](https://github.com/Ekiserrepe/uritoken-course) for unique assets in depth, IPFS, and signing with Xaman.
-- [Learn Xahau](https://learnxahau.inftf.org) for the ledger in general.
+- The courses listed on [xahau.network/learn](https://xahau.network/learn/): **Learn URITokens** for unique assets in depth, IPFS, and signing with Xaman, and **Learn Xahau** for the Xahau Network in general.
 
 You've issued, controlled, sold, serviced, valued, governed and retired a tokenized asset. Everything else is the same steps, with real money and real signatures.`,
       },

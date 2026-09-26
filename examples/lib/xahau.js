@@ -70,7 +70,8 @@ async function submit(client, signer, tx, label = tx.TransactionType) {
   const meta = res.result.meta;
   const code = meta.TransactionResult;
   const hooks = (meta.HookExecutions || [])
-    .map((h) => fromHex(h.HookExecution.HookReturnString))
+    // A Hook returns a C string: drop its terminating NUL before printing
+    .map((h) => fromHex(h.HookExecution.HookReturnString).replace(/\0+$/, ""))
     .filter(Boolean);
   console.log(`${code === "tesSUCCESS" ? "✔" : "✘"} ${label}: ${code}${hooks.length ? `  [hook] ${hooks.join(" | ")}` : ""}`);
   return { code, hash, meta, result: res.result };

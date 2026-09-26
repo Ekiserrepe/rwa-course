@@ -137,10 +137,10 @@ Leave CAROL unapproved: this lesson and [Module 8](?m=8&l=2) rely on her being r
 
 \`\`\`
 ✔ install subscription_desk: tesSUCCESS
-✔ alice pays 1000 USD to the desk: tesSUCCESS  [hook] Desk: subscription accepted, tokens on the way. 
+✔ alice pays 1000 USD to the desk: tesSUCCESS  [hook] Desk: subscription accepted, tokens on the way.
   ALICE: 478 -> 488 HBOND
-✘ carol pays 1000 USD to the desk: tecHOOK_REJECTED  [hook] Desk: your trust line is not authorised yet (KYC pending). 
-✘ bob pays 500 USD to the desk: tecHOOK_REJECTED  [hook] Desk: partial payments are refused. 
+✘ carol pays 1000 USD to the desk: tecHOOK_REJECTED  [hook] Desk: your trust line is not authorised yet (KYC pending).
+✘ bob pays 500 USD to the desk: tecHOOK_REJECTED  [hook] Desk: partial payments are refused.
 \`\`\`
 
 The emitted payment is a **separate transaction**, validated a ledger or two later; the script polls for the balance change. Two more cases behave as designed: 250 USD buys 2.5 HBOND (issued tokens are divisible, so the desk doesn't need to round), and a plain XAH payment to the treasury passes with "Desk: XAH received, not a subscription."
@@ -207,12 +207,12 @@ Installed on the ISSUER with a collect call (\`asfTshCollect\` + \`hsfCollect\`)
 \`\`\`
 ✔ asfTshCollect: tesSUCCESS
 ✔ install holding_cap: tesSUCCESS
-✔ bob -> alice: 5 HBOND: tesSUCCESS  [hook] Cap: within the limit. 
-✔ bob -> alice: 10 HBOND: tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen. 
+✔ bob -> alice: 5 HBOND: tesSUCCESS  [hook] Cap: within the limit.
+✔ bob -> alice: 10 HBOND: tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen.
   BOB      306
   ALICE    503
 ✘ alice -> bob: 1 HBOND: tecPATH_DRY
-✔ alice: buy 1 HBOND at ≤ 101 USD: tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen. 
+✔ alice: buy 1 HBOND at ≤ 101 USD: tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen.
   ALICE now holds 504 HBOND and 7498.75 USD
 \`\`\`
 

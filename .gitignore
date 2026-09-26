@@ -145,3 +145,9 @@ public/search/
 public/sitemap.xml
 public/robots.txt
 public/CNAME
+
+# macOS Finder metadata
+.DS_Store
+
+# Vite/Vitest dependency cache
+.vite/

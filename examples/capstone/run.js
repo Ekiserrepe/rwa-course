@@ -11,7 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Wallet, xahToDrops, hashes } = require("xahau");
-const { connect, submit, wallet, toHex, fromHex, currencyCode, trustLine, getObject } = require("../lib/xahau");
+const { connect, submit, wallet, fromSeed, toHex, fromHex, currencyCode, trustLine, getObject, writeSecret, dec, tokenValue, ROUND_DOWN } = require("../lib/xahau");
 const { install, remove, currencyBytes, accountBytes, u32, param } = require("../hooks/lib");
 
 const TERMS = JSON.parse(fs.readFileSync(path.join(__dirname, "term-sheet.json"), "utf8"));
@@ -19,14 +19,14 @@ const ACCOUNTS_FILE = path.join(__dirname, "accounts.json");
 const ROLES = ["issuer", "treasury", "stable", "alice", "bob", "dave", "dave2"];
 const INVESTORS = Object.keys(TERMS.investors);
 const CODE = currencyCode(TERMS.token);
-const COUPON = (TERMS.faceValueUSD * TERMS.couponRatePercent) / 100 / TERMS.couponsPerYear;
+const COUPON = dec(TERMS.faceValueUSD).times(TERMS.couponRatePercent).div(100).div(TERMS.couponsPerYear);
 const tf = { SetfAuth: 0x00010000, SetFreeze: 0x00100000, FillOrKill: 0x00040000 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 let client, A; // A.alice is a Wallet
-const tok = (value) => ({ currency: CODE, issuer: A.issuer.address, value: String(value) });
-const usd = (value) => ({ currency: "USD", issuer: A.stable.address, value: String(value) });
-const balance = async (who, amount) => Number((await trustLine(client, A[who].address, amount.issuer, amount.currency))?.balance ?? 0);
+const tok = (value) => ({ currency: CODE, issuer: A.issuer.address, value: tokenValue(value) });
+const usd = (value) => ({ currency: "USD", issuer: A.stable.address, value: tokenValue(value) });
+const balance = async (who, amount) => dec((await trustLine(client, A[who].address, amount.issuer, amount.currency))?.balance ?? 0);
 const remark = (name, value, immutable = false) => ({ Remark: { RemarkName: toHex(name), RemarkValue: toHex(value), Flags: immutable ? 1 : 0 } });
 
 /** Stop the run when a step did not do what it must. */
@@ -50,7 +50,7 @@ const phases = {
       await must(funder, { TransactionType: "Payment", Destination: w.address, Amount: xahToDrops(40) }, `create ${role}`);
       seeds[role] = w.seed;
     }
-    fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(seeds, null, 2));
+    writeSecret(ACCOUNTS_FILE, JSON.stringify(seeds, null, 2));
     load();
   },
 
@@ -90,7 +90,7 @@ const phases = {
     await must(A.treasury, { TransactionType: "TrustSet", LimitAmount: tok(TERMS.supply * 10) }, "treasury: token line");
     await must(A.issuer, { TransactionType: "TrustSet", LimitAmount: { currency: CODE, issuer: A.treasury.address, value: "0" }, Flags: tf.SetfAuth }, "issuer: authorise treasury");
     await must(A.issuer, { TransactionType: "Payment", Destination: A.treasury.address, Amount: tok(TERMS.supply) }, `issue ${TERMS.supply} ${TERMS.token}`);
-    expect((await balance("treasury", tok(0))) === TERMS.supply, `treasury holds ${TERMS.supply}`);
+    expect((await balance("treasury", tok(0))).eq(TERMS.supply), `treasury holds ${TERMS.supply}`);
   },
 
   // Investors ask, the issuer approves after (simulated) KYC
@@ -101,7 +101,7 @@ const phases = {
     }
   },
 
-  // The subscription desk Hook sells at face value, in the same ledger
+  // The subscription desk Hook sells at face value; its deliveries land a ledger or two later
   async offering() {
     await install(client, A.treasury, "subscription_desk", {
       on: ["Payment"],
@@ -117,8 +117,8 @@ const phases = {
     }
     await sleep(8000); // the desk's emitted payments land in the following ledgers
     for (const who of INVESTORS) {
-      const want = TERMS.investors[who].subscribeUSD / TERMS.faceValueUSD;
-      expect((await balance(who, tok(0))) === want, `${who} received ${want} ${TERMS.token}`);
+      const want = dec(TERMS.investors[who].subscribeUSD).div(TERMS.faceValueUSD);
+      expect((await balance(who, tok(0))).eq(want), `${who} received ${want} ${TERMS.token}`);
     }
     await must(A.issuer, { TransactionType: "SetRemarks", ObjectID: hashes.hashAccountRoot(A.issuer.address), Remarks: [remark("status", "offering closed")] }, "status: offering closed");
   },
@@ -132,7 +132,7 @@ const phases = {
       Provider: toHex(`${TERMS.legalName} administrator`),
       AssetClass: toHex("bond"),
       LastUpdateTime: Math.floor(Date.now() / 1000),
-      PriceDataSeries: [{ PriceData: { BaseAsset: CODE, QuoteAsset: "USD", AssetPrice: Math.round(Number(TERMS.navUSD) * 10 ** decimals.length).toString(16), Scale: decimals.length } }],
+      PriceDataSeries: [{ PriceData: { BaseAsset: CODE, QuoteAsset: "USD", AssetPrice: dec(TERMS.navUSD).shiftedBy(decimals.length).toString(16), Scale: decimals.length } }],
     }, `publish NAV ${TERMS.navUSD}`);
   },
 
@@ -140,15 +140,16 @@ const phases = {
   async coupon() {
     const ledger = (await client.request({ command: "ledger", ledger_index: "validated" })).result.ledger_index;
     const lines = (await client.request({ command: "account_lines", account: A.issuer.address, ledger_index: ledger })).result.lines;
-    const holders = lines.filter((l) => l.currency === CODE && -Number(l.balance) > 0 && l.account !== A.treasury.address);
-    let paid = 0;
+    const holders = lines.filter((l) => l.currency === CODE && dec(l.balance).lt(0) && l.account !== A.treasury.address);
+    let paid = dec(0);
     for (const l of holders) {
-      const amount = Math.floor(-Number(l.balance) * COUPON * 100) / 100;
+      // Exact decimals, rounded down to the cent
+      const amount = dec(l.balance).negated().times(COUPON).decimalPlaces(2, ROUND_DOWN);
       await must(A.treasury, {
         TransactionType: "Payment", Destination: l.account, Amount: usd(amount),
         Memos: [{ Memo: { MemoType: toHex("coupon"), MemoData: toHex(`coupon:${ledger}`) } }],
       }, `coupon ${amount} USD`);
-      paid += amount;
+      paid = paid.plus(amount);
     }
     expect(holders.length === INVESTORS.length, `${holders.length} holders paid ${paid} USD in total`);
   },
@@ -157,31 +158,31 @@ const phases = {
   async incident() {
     const lost = await balance("dave", tok(0));
     await must(A.issuer, { TransactionType: "TrustSet", LimitAmount: { currency: CODE, issuer: A.dave.address, value: "0" }, Flags: tf.SetFreeze }, "freeze dave's old account");
-    await must(A.issuer, { TransactionType: "Clawback", Amount: { currency: CODE, issuer: A.dave.address, value: String(lost) } }, `claw back ${lost}`);
+    await must(A.issuer, { TransactionType: "Clawback", Amount: { currency: CODE, issuer: A.dave.address, value: lost.toFixed() } }, `claw back ${lost}`);
     await must(A.dave2, { TransactionType: "TrustSet", LimitAmount: tok(TERMS.supply) }, "dave2: request token line");
     await must(A.issuer, { TransactionType: "TrustSet", LimitAmount: { currency: CODE, issuer: A.dave2.address, value: "0" }, Flags: tf.SetfAuth }, "issuer: KYC approved dave2");
     await must(A.issuer, {
       TransactionType: "Payment", Destination: A.dave2.address, Amount: tok(lost),
       Memos: [{ Memo: { MemoType: toHex("reissue"), MemoData: toHex(`replaces ${A.dave.address}`) } }],
     }, `re-issue ${lost} to dave2`);
-    expect((await balance("dave", tok(0))) === 0 && (await balance("dave2", tok(0))) === lost, "dave's holding moved to his new account");
+    expect((await balance("dave", tok(0))).isZero() && (await balance("dave2", tok(0))).eq(lost), "dave's holding moved to his new account");
   },
 
   // Maturity: close the desk, open a funded redemption window, holders redeem, supply retired
   async maturity() {
     await remove(client, A.treasury, "close the subscription desk");
     const gb = (await client.request({ command: "gateway_balances", account: A.issuer.address, hotwallet: [A.treasury.address], ledger_index: "validated" })).result;
-    const outstanding = Number(gb.obligations?.[CODE] ?? 0);
-    const due = outstanding * TERMS.faceValueUSD;
+    const outstanding = dec(gb.obligations?.[CODE] ?? 0);
+    const due = outstanding.times(TERMS.faceValueUSD);
     // The money raised bought the asset; at maturity the SPV sells it and the
     // buyer's bank wires the proceeds (here: STABLE pays the treasury directly)
     await must(A.stable, { TransactionType: "Payment", Destination: A.treasury.address, Amount: usd(due) }, `asset sale proceeds: ${due} USD`);
-    expect((await balance("treasury", usd(0))) >= due, `treasury can pay ${due} USD principal`);
+    expect((await balance("treasury", usd(0))).gte(due), `treasury can pay ${due} USD principal`);
     await must(A.treasury, { TransactionType: "OfferCreate", TakerGets: usd(due), TakerPays: tok(outstanding) }, "open the redemption window");
     for (const who of [...INVESTORS, "dave2"]) {
       const units = await balance(who, tok(0));
-      if (units <= 0) continue;
-      await must(A[who], { TransactionType: "OfferCreate", TakerGets: tok(units), TakerPays: usd(units * TERMS.faceValueUSD), Flags: tf.FillOrKill }, `${who} redeems ${units}`);
+      if (units.lte(0)) continue;
+      await must(A[who], { TransactionType: "OfferCreate", TakerGets: tok(units), TakerPays: usd(units.times(TERMS.faceValueUSD)), Flags: tf.FillOrKill }, `${who} redeems ${units}`);
     }
     const left = await balance("treasury", tok(0));
     await must(A.treasury, { TransactionType: "Payment", Destination: A.issuer.address, Amount: tok(left) }, `retire ${left}`);
@@ -204,7 +205,7 @@ const phases = {
 function load() {
   if (!fs.existsSync(ACCOUNTS_FILE)) throw new Error("No accounts yet: run the accounts phase first");
   const seeds = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, "utf8"));
-  A = Object.fromEntries(Object.entries(seeds).map(([role, seed]) => [role, Wallet.fromSeed(seed, { algorithm: "ecdsa-secp256k1" })]));
+  A = Object.fromEntries(Object.entries(seeds).map(([role, seed]) => [role, fromSeed(seed)]));
 }
 
 async function main() {

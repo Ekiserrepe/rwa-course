@@ -12,11 +12,11 @@
 //   node 12-treasury-line.js
 //   node 13-issue-supply.js
 //   node 20-onboard-investor.js ALICE --approve  (and for every receiver)
-const { connect, wallet, submit, trustLine, BOND_CODE, bond } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, BOND_CODE, bond, dec, tokenValue, ROUND_UP } = require("./lib/xahau");
 
 async function main() {
   const [from, to, amount] = process.argv.slice(2).map((s) => s?.toUpperCase());
-  if (!from || !to || !(Number(amount) > 0)) throw new Error("Usage: 21-transfer.js <FROM> <TO> <amount>");
+  if (!from || !to || !(dec(amount ?? NaN).gt(0))) throw new Error("Usage: 21-transfer.js <FROM> <TO> <amount>");
   const client = await connect();
   const issuer = wallet("ISSUER_SEED").address;
   const sender = wallet(`${from}_SEED`);
@@ -24,13 +24,14 @@ async function main() {
 
   // TransferRate is in billionths: 1002000000 = 0.2% fee. Absent or 0 = no fee.
   const { TransferRate: rate } = (await client.request({ command: "account_info", account: issuer, ledger_index: "validated" })).result.account_data;
-  const fee = rate && sender.address !== issuer && receiver !== issuer ? rate / 1e9 : 1;
+  const fee = rate && sender.address !== issuer && receiver !== issuer ? dec(rate).div(1e9) : dec(1);
 
   await submit(client, sender, {
     TransactionType: "Payment",
     Destination: receiver,
     Amount: bond(amount),
-    ...(fee > 1 ? { SendMax: bond(Number(amount) * fee) } : {}), // the most the sender will spend
+    // The most the sender will spend: rounded UP, or the fee isn't covered
+    ...(fee.gt(1) ? { SendMax: bond(tokenValue(dec(amount).times(fee), ROUND_UP)) } : {}),
   }, `${from.toLowerCase()} -> ${to.toLowerCase()}: ${amount} HBOND`);
 
   for (const [name, addr] of [[from, sender.address], [to, receiver]]) {

@@ -25,7 +25,7 @@ async function main() {
 
   // 1. No regular key and no signer list: the ledger won't let the account lock itself out
   await submit(client, scratch, { TransactionType: "AccountSet", SetFlag: asfDisableMaster },
-    "disable master, no regular key/signer list");
+    "disable master, no regular key/signer list", { expect: ["tecNO_ALTERNATIVE_KEY"] });
 
   // 2. Give it another way to sign first: here a 1-of-1 signer list
   await submit(client, scratch, {

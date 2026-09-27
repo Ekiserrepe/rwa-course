@@ -11,7 +11,7 @@
 //   node 30-stablecoin-setup.js
 //   node 31-primary-offer.js 5000 100
 //   node 33-subscribe.js ALICE 20
-const { connect, wallet, submit, bond, usd } = require("./lib/xahau");
+const { connect, wallet, submit, bond, usd, dec } = require("./lib/xahau");
 
 async function main() {
   const [roleArg, a, b] = process.argv.slice(2);
@@ -26,7 +26,7 @@ async function main() {
     const { result } = await submit(client, seller, {
       TransactionType: "OfferCreate",
       TakerGets: bond(a),
-      TakerPays: usd(Number(a) * Number(b)),
+      TakerPays: usd(dec(a).times(b)),
     }, `${role.toLowerCase()}: sell ${a} HBOND at ${b} USD`);
     console.log(`  Cancel it later with: node 34-sell-offer.js ${role} --cancel ${result.tx_json?.Sequence ?? result.Sequence}`);
   }

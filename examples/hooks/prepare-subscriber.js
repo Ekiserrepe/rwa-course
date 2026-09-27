@@ -15,7 +15,7 @@
 //   node 12-treasury-line.js
 //   node 13-issue-supply.js
 //   node 30-stablecoin-setup.js
-const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("../lib/xahau");
+const { connect, wallet, submit, trustLine, bond, usd, dec, BOND_CODE } = require("../lib/xahau");
 
 const tfSetfAuth = 0x00010000;
 
@@ -26,8 +26,8 @@ async function main() {
     throw new Error(`${role} runs the offering; pass an investor role such as ALICE, BOB or CAROL`);
   }
   const usdArg = process.argv.indexOf("--usd");
-  const minUsd = usdArg > 0 ? Number(process.argv[usdArg + 1]) : 1000;
-  if (!(minUsd >= 0)) throw new Error("--usd needs a number, e.g. --usd 1000");
+  const minUsd = dec(usdArg > 0 ? process.argv[usdArg + 1] ?? NaN : 1000);
+  if (!minUsd.gte(0)) throw new Error("--usd needs a number, e.g. --usd 1000");
   const kyc = !process.argv.includes("--no-kyc");
 
   const client = await connect();
@@ -43,7 +43,7 @@ async function main() {
     throw new Error("The ISSUER doesn't require authorisation, so it can't approve anyone: run 10-issuer-setup.js (Module 2). It needs an issuer with no trust lines yet, and tells you how to clear them if there are");
   }
   const stock = await trustLine(client, treasury.address, issuer.address, BOND_CODE);
-  if (!(Number(stock?.balance) > 0)) {
+  if (!dec(stock?.balance ?? 0).gt(0)) {
     throw new Error("The TREASURY holds no HBOND, so the desk has nothing to deliver: run 12-treasury-line.js and 13-issue-supply.js (Module 2) first");
   }
   if (!(await trustLine(client, treasury.address, stable.address, "USD"))) {
@@ -71,8 +71,8 @@ async function main() {
     await submit(client, investor, { TransactionType: "TrustSet", LimitAmount: usd(10_000_000) }, `${who}: USD trust line`);
     cash = await trustLine(client, investor.address, stable.address, "USD");
   }
-  const missing = minUsd - Number(cash.balance);
-  if (missing > 0) {
+  const missing = minUsd.minus(cash.balance);
+  if (missing.gt(0)) {
     await submit(client, stable, { TransactionType: "Payment", Destination: investor.address, Amount: usd(missing) }, `stable -> ${who}: ${missing} USD`);
   }
 

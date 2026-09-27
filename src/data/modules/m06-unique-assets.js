@@ -36,7 +36,7 @@ A URIToken is its own ledger object:
 | \`Flags\` | \`1\` = burnable | Never |
 | \`Remarks\` | Labelled notes, set by the issuer | Yes, unless immutable |
 
-Its **ID** is \`SHA-512Half(issuer + URI)\`, known before minting (\`hashes.hashURIToken\`), so the same issuer can't mint two tokens with the same URI. A registry that mints one token per parcel should put the parcel identifier in the URI: then a duplicate deed for the same parcel is **impossible**, not just forbidden.
+Its **ID** is \`SHA-512Half(issuer + URI)\`, known before minting (\`hashes.hashURIToken\`), so the same issuer can't mint two tokens with the same URI **while the first one exists**. A registry that mints one token per parcel should put the parcel identifier in the URI: then a second live deed for the same parcel is **impossible**, not just forbidden. Once a token is burned, its URI is free again and the same ID can be minted anew, which is exactly how a registrar reissues a corrected deed. Anyone checking a deed should therefore look at its mint transaction and history, not the ID alone.
 
 ### Choosing the URI
 
@@ -58,7 +58,7 @@ With \`tfBurnable\`, the issuer can destroy the token **even after selling it**.
       slides: [
         {
           title: { en: "URIToken" },
-          content: { en: "Issuer (fixed) · Owner (moves)\nURI + Digest (fixed)\nRemarks (issuer-controlled)\n\nID = hash(issuer + URI): no duplicates" },
+          content: { en: "Issuer (fixed) · Owner (moves)\nURI + Digest (fixed)\nRemarks (issuer-controlled)\n\nID = hash(issuer + URI)\nno two live tokens with one URI" },
           visual: "📜",
         },
       ],

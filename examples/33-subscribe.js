@@ -12,22 +12,22 @@
 //   node 20-onboard-investor.js ALICE --approve  (the buyer)
 //   node 30-stablecoin-setup.js
 //   node 31-primary-offer.js 5000 100
-const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, bond, usd, dec, BOND_CODE } = require("./lib/xahau");
 
 const tfFillOrKill = 0x00040000;
 
 async function main() {
   const role = (process.argv[2] ?? "").toUpperCase();
-  const amount = Number(process.argv[3]);
-  const maxPrice = Number(process.argv[4] ?? 101);
-  if (!role || !(amount > 0)) throw new Error("Usage: 33-subscribe.js <ROLE> <amount> [maxPriceUSD]");
+  const amount = dec(process.argv[3] ?? NaN);
+  const maxPrice = dec(process.argv[4] ?? 101);
+  if (!role || !amount.gt(0)) throw new Error("Usage: 33-subscribe.js <ROLE> <amount> [maxPriceUSD]");
   const client = await connect();
   const investor = wallet(`${role}_SEED`);
 
   await submit(client, investor, {
     TransactionType: "OfferCreate",
     TakerPays: bond(amount),              // what the investor wants
-    TakerGets: usd(amount * maxPrice),    // the most it will pay
+    TakerGets: usd(amount.times(maxPrice)), // the most it will pay
     Flags: tfFillOrKill,
   }, `${role.toLowerCase()}: buy ${amount} HBOND at ≤ ${maxPrice} USD`);
 

@@ -101,7 +101,9 @@ Hooks remain very useful. They work best on accounts the issuer runs, where they
       id: "m9l2",
       title: { en: "A Subscription Desk: Pay USD, Receive HBOND" },
       theory: {
-        en: `[Module 4](?m=4&l=1) sold HBOND with a DEX offer. Some investors (and their compliance teams) prefer a plain instruction: "send USD to this address". A Hook on the TREASURY makes that as safe as the DEX: it checks everything **before** the USD moves, and delivers HBOND in the same run.
+        en: `[Module 4](?m=4&l=1) sold HBOND with a DEX offer. Some investors (and their compliance teams) prefer a plain instruction: "send USD to this address". A Hook on the TREASURY makes that safe in three steps: it checks everything it can **before** the USD moves, it **emits** the HBOND delivery, and if that delivery fails, its **callback** pays the USD back.
+
+That is not the same guarantee as the DEX. A DEX trade swaps both sides in **one** transaction. Here the delivery is a **second** transaction, applied a ledger or two later, and a lot can happen in between. The desk is built so that a failure ends with the investor holding either the tokens or their USD back; only if the refund fails too does it fall to the operations team, with the debt recorded on the ledger.
 
 ### What the desk checks
 
@@ -109,10 +111,24 @@ The treasury is the destination of the investor's payment, so its Hook is a **st
 
 1. **The currency** is the configured USD, from the configured issuer. Anything else: refused.
 2. **No partial payments.** With \`tfPartialPayment\`, a payment's \`Amount\` is only a maximum and less may arrive; a desk that trusted \`Amount\` would over-deliver. Refused.
-3. **The sender can receive HBOND**: it has a trust line to the issuer, **authorised**. The Hook reads that trust line with \`util_keylet(KEYLET_LINE, …)\` and checks the issuer's auth bit (\`lsfLowAuth\` or \`lsfHighAuth\`, depending on which account ID is numerically lower).
-4. **The treasury has enough HBOND left.**
+3. **The sender can receive HBOND**: it has a trust line to the issuer, **authorised**, not deep-frozen, with a limit that leaves room for the new tokens. The Hook reads that trust line with \`util_keylet(KEYLET_LINE, …)\` and checks the issuer's flags on it (\`lsfLowAuth\` or \`lsfHighAuth\`, depending on which account ID is numerically lower, and the same for the freeze flags).
+4. **The token can move**: the issuer hasn't frozen it globally and charges no transfer fee (a fee would need a \`SendMax\` the simple delivery doesn't carry).
+5. **The treasury has enough HBOND left**, counting only stock not already promised to earlier subscriptions whose delivery is still on its way.
 
 Then it **emits** a payment of \`USD ÷ PRICE\` HBOND back to the sender. XAH payments and the treasury's own transactions (including that emitted payment, which triggers the Hook again) pass untouched.
+
+### Reserving stock, and the callback
+
+Two subscriptions can arrive in the same ledger. Both would see the same treasury balance, because neither delivery has happened yet. So the Hook keeps a running total in its **state**, under the key \`RESERVED\`: every accepted subscription adds its units, and check 5 subtracts the total from the balance. It also stores each pending delivery under the emitted payment's hash: who paid, how much USD, how many tokens.
+
+A Hook can export a second function, \`cbak\`, that the ledger runs once a transaction it emitted has been applied, **whatever its result**, or has expired unapplied. The desk's \`cbak\`:
+
+1. Finds the pending delivery by the emitted payment's hash (\`otxn_id\` inside \`cbak\` is the emitted transaction).
+2. Reads the result from the emitted transaction's metadata (\`meta_slot\`, field \`sfTransactionResult\`, where \`0\` is \`tesSUCCESS\`).
+3. Releases the reservation either way.
+4. If the delivery failed, **emits a refund** of the USD, and follows that refund too. If even the refund fails, it records the amount owed in state, under the investor's account, for the operations team.
+
+A delivery can fail even after every check passed: the treasury's resting DEX offer sold the stock in the meantime, the investor lowered their trust line limit, the issuer deep-froze the line. \`npm run verify\` forces one: ALICE pays 500 USD and, in the same ledger, lowers her HBOND limit to what she already holds. The delivery fails and the callback refunds the 500 USD.
 
 ### Preparing a subscriber
 
@@ -131,7 +147,7 @@ ALICE, BOB and CAROL were set up in those modules. For any other role, or after 
 
 The last row deserves a note. The desk doesn't check the sender's balance, so its Hook accepts; the payment itself then fails for lack of funds. A failed transaction discards everything its Hooks emitted, so no HBOND is delivered and no USD moves: the investor loses only the fee.
 
-Leave CAROL unapproved: this lesson and [Module 8](?m=8&l=2) rely on her being refused.
+Leave CAROL unapproved: this lesson relies on her being refused.
 
 ### Running it
 
@@ -143,7 +159,11 @@ Leave CAROL unapproved: this lesson and [Module 8](?m=8&l=2) rely on her being r
 ✘ bob pays 500 USD to the desk: tecHOOK_REJECTED  [hook] Desk: partial payments are refused.
 \`\`\`
 
-The emitted payment is a **separate transaction**, validated a ledger or two later; the script polls for the balance change. Two more cases behave as designed: 250 USD buys 2.5 HBOND (issued tokens are divisible, so the desk doesn't need to round), and a plain XAH payment to the treasury passes with "Desk: XAH received, not a subscription."
+The emitted payment is a **separate transaction**, validated a ledger or two later; the script polls for the balance change, and reports a refund if the USD comes back instead. Two more cases behave as designed: 250 USD buys 2.5 HBOND (issued tokens are divisible, so the desk doesn't need to round), and a plain XAH payment to the treasury passes with "Desk: XAH received, not a subscription."
+
+### Removing the desk
+
+The callback runs only while the Hook is installed. \`install-subscription-desk.js --remove\` therefore refuses while the Hook's state still holds anything (\`account_namespace\` lists it): a reservation or a pending delivery means a refund might still be needed. Wait a few ledgers and remove it then.
 
 ### Parameters, not constants
 
@@ -185,8 +205,13 @@ The currency, the token and the price are **HookParameters** given at install ti
       slides: [
         {
           title: { en: "Desk Checks, Then Delivers" },
-          content: { en: "✔ right USD, right issuer\n✘ partial payments\n✔ sender's HBOND line authorised\n✔ treasury has enough\n→ emit HBOND = USD ÷ PRICE" },
+          content: { en: "✔ right USD, right issuer\n✘ partial payments\n✔ sender's line: authorised, room, not deep-frozen\n✔ unreserved stock is enough\n→ reserve, emit HBOND = USD ÷ PRICE" },
           visual: "🏦",
+        },
+        {
+          title: { en: "The Callback" },
+          content: { en: "cbak runs when the delivery settles\nmeta_slot → sfTransactionResult\nDelivered: release the reservation\nFailed: release it and refund the USD" },
+          visual: "↩️",
         },
       ],
     },
@@ -198,11 +223,16 @@ The currency, the token and the price are **HookParameters** given at install ti
 
 ### How holding_cap works
 
-Installed on the ISSUER with a collect call (\`asfTshCollect\` + \`hsfCollect\`), with \`HookOn\` set to **Payment and OfferCreate**, so it runs weakly after every HBOND payment between holders and every DEX order that touches HBOND:
+Installed on the ISSUER with a collect call (\`asfTshCollect\` + \`hsfCollect\`), with \`HookOn\` set to **every transaction type**. The issuer becomes a weak stakeholder of any transaction that changes a balance of its token, so the Hook runs after each one, whatever its type.
 
-1. Ignore the issuer's own transactions, other currencies, and payments **to** the issuer (returns).
-2. Pick the account that may now hold more: the **receiver** of a payment, or the account that **placed** a DEX order. Read its trust line: a weak Hook runs after the transaction, so the balance already includes it.
-3. If it's above \`MAX\`, **emit a \`TrustSet\` with \`tfSetFreeze\`** on that line.
+Don't work out from the transaction's fields who received tokens. Tokens move in many ways, and several have no "receiver" field: a Payment whose \`Amount\` names the destination as issuer ("any issuer the destination trusts"), a \`CheckCash\`, a \`Remit\`, a payment channel claim, a URIToken bought with HBOND, a sell order that fills someone's **resting bid**. Read the **result** instead:
+
+1. Ignore the issuer's own transactions.
+2. Load the transaction's metadata with \`meta_slot\` (weak executions run after the transaction, so it's there) and walk \`AffectedNodes\`.
+3. For each trust line of HBOND with this issuer, work out the holder from the two limits, and its balance before (\`PreviousFields\`) and after (\`FinalFields\`).
+4. If the balance went **up** and is now above \`MAX\`, and the holder isn't already frozen or **exempt**, **emit a \`TrustSet\` with \`tfSetFreeze\`** on that line (up to four per transaction).
+
+\`EXEMPT\` is an optional install parameter: account IDs the cap never freezes. The installer passes the TREASURY (it holds the unsold supply and buys everything back at maturity) and the VAULT if there is one.
 
 \`\`\`
 ✔ asfTshCollect: tesSUCCESS
@@ -216,11 +246,22 @@ Installed on the ISSUER with a collect call (\`asfTshCollect\` + \`hsfCollect\`)
   ALICE now holds 504 HBOND and 7498.75 USD
 \`\`\`
 
-The 10-token transfer took ALICE to 503, over the cap of 500, and the Hook froze her: her next attempt to send fails with \`tecPATH_DRY\`. The compliance team then unfroze her (\`22-freeze.js ALICE --off\`, not shown), and she bought 1 more HBOND **on the DEX**: the Hook caught that too and froze her again. As [Module 3](?m=3&l=1) showed, a frozen holder can still return tokens to the issuer, so the fix is in her hands.
+The 10-token transfer took ALICE over the cap of 500, and the Hook froze her: her next attempt to send fails with \`tecPATH_DRY\`. The compliance team then unfroze her (\`22-freeze.js ALICE --off\`, not shown), and she received more HBOND by two other routes: a payment whose \`Amount\` names her as the issuer, and a purchase **on the DEX**. The Hook caught both and froze her again each time. As [Module 3](?m=3&l=1) showed, a frozen holder can still return tokens to the issuer, so the fix is in her hands.
+
+The route through \`Amount\` deserves a look, because a Hook that checked the transaction's fields would miss it. With a cap of 12, BOB pays ALICE 5 HBOND, naming ALICE as the amount's issuer and the real issuer in \`SendMax\`:
+
+\`\`\`
+✔ bob -> alice 5 HBOND (Amount.issuer: alice): tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen.
+alice 15 frozen by issuer: true
+\`\`\`
+
+\`Amount.issuer\` isn't the token's issuer, yet HBOND moved. The metadata shows ALICE's line going up, and that is what the Hook reads.
 
 ### Building a transaction by hand in C
 
 The Hooks headers have a ready-made macro for a payment, not for a \`TrustSet\`, so \`holding_cap.c\` serialises one field by field: type, flags, sequence 0, first/last ledger, \`LimitAmount\` (a zero amount of HBOND whose "issuer" is the holder), fee, an empty signing key, the account, and finally \`EmitDetails\` from \`etxn_details\`.
+
+It builds that transaction inside a loop over the affected lines, which matters for **guards**. Every loop needs \`GUARD(n)\`, and \`n\` counts iterations over the **whole** execution, not per pass of an outer loop. The headers' macros hide loops of their own (\`ENCODE_TL\` copies 48 bytes with a guard of 48; \`BUFFER_EQUAL\` and \`ACCOUNT_COMPARE\` loop too), so the second pass through such a macro breaks its guard and the Hook is rolled back. \`holding_cap.c\` compares and copies its 20- and 48-byte values with plain word reads instead.
 
 Size the \`EmitDetails\` buffer with care: \`etxn_details\` **refuses a buffer shorter than 116 bytes** (138 with a callback), even though it writes only 115. A buffer sized to what it writes makes \`emit\` fail with \`EMISSION_FAILURE\` (-11).
 
@@ -228,14 +269,8 @@ Size the \`EmitDetails\` buffer with care: \`etxn_details\` **refuses a buffer s
 
 - A **collect call** means the issuer pays the fee for every weak execution: every HBOND transfer between holders now costs the issuer a little XAH. Keep the Hook small.
 - There's a gap between the transfer and the freeze: the emitted \`TrustSet\` lands a ledger or two later, and until then the receiver isn't frozen and could pass the tokens on. The rule is **reactive**, not preventive, and your terms should say so.
-- **DEX trades need \`OfferCreate\` in \`HookOn\`.** With \`Payment\` alone, the issuer's Hook never runs on a DEX purchase (\`hook executions: []\`), so a buyer could take 600 tokens with a cap of 500. The Hook must also check the account that **placed** the order, since a DEX trade has no payment receiver. With both:
-
-  \`\`\`
-  ✔ A buys 600 on DEX (HookOn Payment+OfferCreate): tesSUCCESS  [hook] Cap: limit exceeded, receiver frozen.
-    A: 600, frozen=true
-  \`\`\`
-
-  One gap remains, stated in the source: when someone **sells into a resting bid**, the account that gains tokens is the bid's owner, not the account that sent the transaction, and this Hook doesn't check it. Closing that gap means reading the transaction's metadata (\`meta_slot\`).
+- **\`HookOn\` must cover every type.** A Hook listening to \`Payment\` alone never runs on a DEX purchase, a check or a Remit, so a buyer could take 600 tokens with a cap of 500. Reading the metadata only helps if the Hook runs at all.
+- A transaction that touches more than 32 ledger objects, or pushes more than four holders over the cap at once, is only partly examined. Size those limits to your token.
 
 ### In the Xahau docs
 
@@ -258,7 +293,7 @@ Size the \`EmitDetails\` buffer with care: \`etxn_details\` **refuses a buffer s
       slides: [
         {
           title: { en: "Reactive Compliance" },
-          content: { en: "Issuer Hook, collect call (weak)\nAfter each transfer: receiver > MAX?\n→ emit TrustSet tfSetFreeze\n\nCan't block. Can freeze a ledger later." },
+          content: { en: "Issuer Hook, collect call (weak), HookOn: all\nRead the metadata: which lines went up?\nAbove MAX → emit TrustSet tfSetFreeze\n\nCan't block. Can freeze a ledger later." },
           visual: "🧯",
         },
         {
@@ -281,10 +316,25 @@ Size the \`EmitDetails\` buffer with care: \`etxn_details\` **refuses a buffer s
 | Step | Transaction | What the Hook does |
 |---|---|---|
 | **Lock** | A payment of HBOND to the vault, carrying two transaction \`HookParameters\`: \`BEN\` (who receives) and \`AFTER\` (when, in ledger time) | Checks both, checks the beneficiary has an **authorised** trust line, and records the lock in its state under the payment's hash. Refuses otherwise, so nothing moves |
-| **Release** | An **Invoke** to the vault with \`ID\` = the lock's hash. Anyone may send it, like \`EscrowFinish\` | Once ledger time passes \`AFTER\`, emits the payment to the beneficiary and deletes the lock. Too early: refused |
+| **Release** | An **Invoke** to the vault with \`ID\` = the lock's hash. Anyone may send it, like \`EscrowFinish\` | Once ledger time passes \`AFTER\`, emits the payment to the beneficiary and marks the lock "releasing". Too early: refused |
+| **Settle** | None: the ledger runs the Hook's \`cbak\` once the release payment has been applied | Delivered: deletes the lock. Failed: marks it "locked" again, so it can be released once the cause is fixed |
 | **Void** | An Invoke from the **issuer** with \`ID\` and \`OP = VOID\` | Deletes the lock without paying anyone: the step after a clawback |
 
-Any other transaction the vault signs itself is refused, unless the Hook emitted it or it only moves XAH. An **Invoke** is a transaction that does nothing except run the Hooks of its \`Destination\`: the natural way to ask a Hook to act.
+An **Invoke** is a transaction that does nothing except run the Hooks of its \`Destination\`: the natural way to ask a Hook to act.
+
+### The only way out
+
+The Hook is installed with \`HookOn\` set to **every** transaction type. A list of types (Payment, OfferCreate, CheckCreate…) always leaves some route out: a \`Remit\`, or a URIToken bought with HBOND, would move locked tokens without the Hook ever running. With every type, the vault's own transactions are refused unless:
+
+- the Hook emitted them (a release);
+- they move only XAH (fees and reserves);
+- they only manage keys: \`AccountSet\`, \`SetRegularKey\`, \`SignerListSet\`. These are what you need to put the vault's key out of reach, and they can't move tokens.
+
+Incoming transactions other than payments and invokes are refused too, so nothing but a lock ever brings tokens into the vault.
+
+### Releases that fail
+
+The release payment is a separate transaction, and it can fail after the Hook has emitted it: the beneficiary's line deep-frozen or full, a global freeze, the vault's line frozen. If the Hook deleted the lock when emitting, the tokens would stay in the vault with no lock to release them. So the Hook checks what it can before emitting (authorised, not deep-frozen, vault not frozen, no global freeze, no transfer fee) and keeps the lock until its \`cbak\` has read the payment's result from the metadata (\`meta_slot\`, \`sfTransactionResult\`). While a release is in flight, a second release or a void is refused.
 
 ### Setting it up
 
@@ -339,7 +389,9 @@ When the time comes, anyone can ask. ALICE does, and BOB gets his 20 back:
 ✘ alice: release lock 3C2A7B2F…: tecHOOK_REJECTED  [hook] Lock: no such lock, or it was already released or voided.
 \`\`\`
 
-\`release-lock.js\` reads the lock straight from the Hook's state (\`ledger_entry\` with \`hook_state\`) before asking, so anyone can check a lock's terms without trusting the issuer's word.
+\`release-lock.js\` reads the lock straight from the Hook's state (\`ledger_entry\` with \`hook_state\`) before asking, so anyone can check a lock's terms, and whether a release is in flight, without trusting the issuer's word.
+
+\`npm run verify\` makes a release fail before that one: BOB asks for it and, in the same ledger, lowers his HBOND limit to what he already holds. The emitted payment fails, the callback puts the lock back, and the release above finds it intact.
 
 ### Compared with an escrow
 
@@ -352,13 +404,15 @@ When the time comes, anyone can ask. ALICE does, and BOB gets his 20 back:
 
 The last two rows are the price. Whoever holds the vault's key can **remove the Hook** and then move the tokens. For a lock investors can rely on, put the key out of reach once the Hook is installed: a signer list whose signers include an independent party ([Module 8](?m=8&l=1)), and ideally a disabled master key. The course keeps the key so you can re-run and remove the lesson.
 
+Testnet already runs the **HookOnV2** amendment, not yet enabled on mainnet. It adds \`HookOnIncoming\` and \`HookOnOutgoing\`, which choose the transaction types that fire a Hook separately for when the account is the destination and when it is the source. Once it is on mainnet, \`HookOnOutgoing\` set to every type is the natural way to express "nothing leaves the vault unless the Hook agrees", with the direction checked by the ledger instead of the Hook's code.
+
 ### Build it yourself
 
 \`\`\`
 sh hooks/build.sh lockbox
 \`\`\`
 
-\`hook-cleaner\` keeps only the \`hook\` function and drops any other, so a helper function must be inlined (\`__attribute__((always_inline))\` in \`lockbox.c\`), or the install fails with \`temMALFORMED\`. The bundled headers also lack \`otxn_param\`, the call that reads a transaction's parameters; \`lockbox.c\` declares it.
+\`build.sh\` exports \`hook\` and, when the source has one, \`cbak\`. \`hook-cleaner\` keeps only those two and drops any other function, so a helper function must be inlined (\`__attribute__((always_inline))\` in \`lockbox.c\`), or the install fails with \`temMALFORMED\`. A Hook with a \`cbak\` defines \`HAS_CALLBACK\` before including the headers: its emitted transactions carry a callback, and \`EmitDetails\` grows from 116 to 138 bytes. The bundled headers also lack \`otxn_param\`, the call that reads a transaction's parameters; \`lockbox.c\` declares it.
 
 ### In the Xahau docs
 
@@ -391,7 +445,7 @@ sh hooks/build.sh lockbox
       slides: [
         {
           title: { en: "The Vault Holds, the Hook Guards" },
-          content: { en: "Lock: pay HBOND to VAULT with BEN + AFTER\nRelease: Invoke with ID, after AFTER\nVoid: issuer only, after a clawback\n\nThe vault's own key can't spend" },
+          content: { en: "Lock: pay HBOND to VAULT with BEN + AFTER\nRelease: Invoke with ID, after AFTER\ncbak: delivered → delete, failed → keep\nVoid: issuer only, after a clawback\n\nHookOn: all. The vault's key can't spend" },
           visual: "🔐",
         },
         {
@@ -435,6 +489,8 @@ It compiles with \`-mcpu=mvp\` because newer compilers emit WebAssembly features
 - **Refuse early, accept late.** Every check that can refuse runs before anything is emitted.
 - **Guard every loop** with \`GUARD(n)\`: the VM rejects Hooks with unbounded loops.
 - **Your own emitted transactions trigger your Hook** again: always let the account's own transactions through first.
+- **An emitted transaction can fail.** Never treat "emitted" as "done": keep what you need in state and settle it in \`cbak\`, where \`meta_slot\` gives the result.
+- **\`GUARD(n)\` counts every pass**, including passes through macros that loop, across the whole execution.
 - **Never trust \`Amount\` on a payment you didn't send** without checking for \`tfPartialPayment\`.
 - **Watch macro arguments**: \`ACCOUNT_COMPARE(x, tok + 20, y)\` doesn't compile, because the macro indexes its arguments; use a pointer variable. (Similar macro pitfalls are why the URIToken course recommends \`-Wall\`.)
 - **Removing a Hook**: \`SetHook\` with an empty \`CreateCode\` and \`hsfOverride\` (\`hooks/lib.js\`'s \`remove\`).

@@ -5,6 +5,11 @@
 // whole supply outside the treasury. Holders then sell into it (45-redeem.js)
 // and are paid in the same transaction that takes their tokens.
 //
+// The treasury's own unsold primary offer (31-primary-offer.js) sells HBOND
+// for USD at the same price, so the window would cross it, and the ledger
+// removes the older of two crossing offers from the same account. The script
+// cancels it explicitly first: the primary sale is over at maturity.
+//
 // It refuses to open a window the treasury cannot fund. An offer the owner
 // can't pay for is skipped by the DEX, so nobody would lose anything, but a
 // redemption promise you can't keep is still a default.
@@ -20,24 +25,30 @@
 //   node 33-subscribe.js ALICE 20
 //   node 33-subscribe.js BOB 30 100
 //   (and fund the TREASURY with the principal: the script says how much is missing)
-const { connect, wallet, submit, trustLine, bond, usd, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, bond, usd, dec, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
-  const face = Number(process.argv[2] ?? 100);
+  const face = dec(process.argv[2] ?? 100);
   const client = await connect();
   const treasury = wallet("TREASURY_SEED");
   const issuer = wallet("ISSUER_SEED").address;
 
   const gb = (await client.request({ command: "gateway_balances", account: issuer, hotwallet: [treasury.address], ledger_index: "validated" })).result;
   // Only HBOND: an issuer may have more than one token outstanding
-  const outstanding = Number(gb.obligations?.[BOND_CODE] ?? 0);
+  const outstanding = dec(gb.obligations?.[BOND_CODE] ?? 0);
   // Escrowed USD (a coupon reserve) is part of the balance but can't be spent
   const line = await trustLine(client, treasury.address, usd(0).issuer, "USD");
-  const cash = Number(line?.balance ?? 0) - Number(line?.locked_balance ?? 0);
-  const needed = outstanding * face;
+  const cash = dec(line?.balance ?? 0).minus(line?.locked_balance ?? 0);
+  const needed = outstanding.times(face);
   console.log(`Outstanding: ${outstanding} HBOND. Principal due: ${needed} USD. Treasury holds ${cash} USD unlocked.`);
-  if (outstanding === 0) throw new Error("Nothing to redeem");
-  if (cash < needed) throw new Error(`Short by ${needed - cash} USD: fund the treasury first`);
+  if (outstanding.isZero()) throw new Error("Nothing to redeem");
+  if (cash.lt(needed)) throw new Error(`Short by ${needed.minus(cash)} USD: fund the treasury first`);
+
+  // Close the primary sale: every offer in which the treasury still sells HBOND
+  const { offers } = (await client.request({ command: "account_offers", account: treasury.address, ledger_index: "validated" })).result;
+  for (const o of offers.filter((o) => o.taker_gets.currency === BOND_CODE)) {
+    await submit(client, treasury, { TransactionType: "OfferCancel", OfferSequence: o.seq }, `close the primary offer (${o.taker_gets.value} HBOND unsold)`);
+  }
 
   const { result } = await submit(client, treasury, {
     TransactionType: "OfferCreate",

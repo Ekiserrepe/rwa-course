@@ -18,15 +18,15 @@
 //   node 44-redemption-window.js
 //   node 45-redeem.js ALICE
 //   node 45-redeem.js BOB
-const { connect, wallet, submit, trustLine, bond, toHex, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, bond, toHex, dec, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
   const client = await connect();
   const treasury = wallet("TREASURY_SEED");
   const issuer = wallet("ISSUER_SEED").address;
 
-  const held = Number((await trustLine(client, treasury.address, issuer, BOND_CODE))?.balance ?? 0);
-  if (held > 0) {
+  const held = dec((await trustLine(client, treasury.address, issuer, BOND_CODE))?.balance ?? 0);
+  if (held.gt(0)) {
     await submit(client, treasury, {
       TransactionType: "Payment",
       Destination: issuer,
@@ -35,7 +35,7 @@ async function main() {
     }, `retire ${held} HBOND`);
   }
   const gb = (await client.request({ command: "gateway_balances", account: issuer, ledger_index: "validated" })).result;
-  console.log(`  HBOND in existence: ${Object.values(gb.obligations ?? {})[0] ?? 0}`);
+  console.log(`  HBOND in existence: ${gb.obligations?.[BOND_CODE] ?? 0}`);
   await client.disconnect();
 }
 

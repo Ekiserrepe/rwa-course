@@ -9,14 +9,14 @@
 //   node 01-create-accounts.js
 const fs = require("fs");
 const { Wallet } = require("xahau");
-const { connect, wallet, submit, ENV_FILE } = require("./lib/xahau");
+const { connect, wallet, fromSeed, submit, ENV_FILE, writeSecret } = require("./lib/xahau");
 
 async function main() {
   const env = fs.readFileSync(ENV_FILE, "utf8");
   const officers = ["CFO", "COO", "COUNSEL"].map((role) => {
     const existing = process.env[`${role}_SEED`];
-    const w = existing ? Wallet.fromSeed(existing, { algorithm: "secp256k1" }) : Wallet.generate("ecdsa-secp256k1");
-    if (!existing) fs.appendFileSync(ENV_FILE, `${env.endsWith("\n") ? "" : "\n"}${role}_SEED=${w.seed}\n`);
+    const w = existing ? fromSeed(existing) : Wallet.generate("ecdsa-secp256k1");
+    if (!existing) writeSecret(ENV_FILE, `${env.endsWith("\n") ? "" : "\n"}${role}_SEED=${w.seed}\n`, { append: true });
     console.log(`${role.padEnd(8)} ${w.address}${existing ? "" : "  (new, saved to .env)"}`);
     return w;
   });

@@ -17,7 +17,7 @@
 //   node 33-subscribe.js BOB 30 100
 const fs = require("fs");
 const path = require("path");
-const { connect, wallet, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, dec, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
   const client = await connect();
@@ -31,14 +31,14 @@ async function main() {
   do {
     const res = (await client.request({ command: "account_lines", account: issuer, ledger_index: ledger, limit: 400, marker })).result;
     for (const l of res.lines) {
-      const balance = -Number(l.balance); // the issuer sees its obligations as negative
-      if (l.currency !== BOND_CODE || balance <= 0 || l.account === treasury) continue;
-      holders.push({ account: l.account, balance, frozen: !!l.freeze });
+      const balance = dec(l.balance).negated(); // the issuer sees its obligations as negative
+      if (l.currency !== BOND_CODE || balance.lte(0) || l.account === treasury) continue;
+      holders.push({ account: l.account, balance: balance.toFixed(), frozen: !!l.freeze });
     }
     marker = res.marker;
   } while (marker);
 
-  const total = holders.reduce((s, h) => s + h.balance, 0);
+  const total = holders.reduce((s, h) => s.plus(h.balance), dec(0)).toFixed();
   console.log(`Record date: ledger ${ledger}. ${holders.length} holder(s), ${total} HBOND outside the treasury.`);
   for (const h of holders) console.log(`  ${h.account}  ${h.balance}${h.frozen ? "  (frozen)" : ""}`);
 

@@ -9,6 +9,7 @@
     "verify": "node verify/run-all.mjs"
   },
   "dependencies": {
+    "bignumber.js": "^9.3.1",
     "dotenv": "^16.4.5",
     "xahau": "^4.1.1"
   }

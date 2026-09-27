@@ -23,10 +23,14 @@ async function main() {
   const alice = wallet("ALICE_SEED");
 
   await install(client, issuer, "probe", { on: ["Payment"] });
-  await submit(client, alice, { TransactionType: "Payment", Destination: wallet("BOB_SEED").address, Amount: bond(1) }, "alice -> bob 1 HBOND");
-  await submit(client, alice, { TransactionType: "Payment", Destination: issuer.address, Amount: bond(1) }, "alice -> issuer 1 HBOND");
-  await remove(client, issuer, "remove probe");
-  await client.disconnect();
+  try {
+    await submit(client, alice, { TransactionType: "Payment", Destination: wallet("BOB_SEED").address, Amount: bond(1) }, "alice -> bob 1 HBOND");
+    await submit(client, alice, { TransactionType: "Payment", Destination: issuer.address, Amount: bond(1) }, "alice -> issuer 1 HBOND", { expect: ["tecHOOK_REJECTED"] });
+  } finally {
+    // Whatever happened above, never leave a Hook that refuses every payment to the issuer
+    await remove(client, issuer, "remove probe");
+    await client.disconnect();
+  }
 }
 
 main().catch((err) => {

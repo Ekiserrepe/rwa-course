@@ -1,14 +1,25 @@
 // 90-preflight.js: read an issuer account and report what is (and isn't) ready
 //   node 90-preflight.js [rIssuer]
 //
-// Read-only: it only asks questions. Run it against your testnet issuer
-// before launch, and against the mainnet one before you open the offering.
+// Read-only: it only asks questions, so it runs on mainnet without ALLOW_MAINNET.
+// Run it against your testnet issuer before launch, and against the mainnet
+// one before you open the offering (NETWORK=wss://xahau.network).
+//
+// It also asks the node which amendments are enabled: every feature the
+// course's flows rely on must be, on the network you launch on.
 const { hashes } = require("xahau");
-const { connect, wallet, fromHex, getObject } = require("./lib/xahau");
+const { connect, wallet, fromHex, getObject, NETWORK } = require("./lib/xahau");
+
+// The amendments this course's flows depend on
+const NEEDED = ["Clawback", "DeepFreeze", "DepositAuth", "DepositPreauth", "PriceOracle", "PaychanAndEscrowForTokens",
+  "Remarks", "URIToken", "Hooks", "HookCanEmit", "IOUIssuerWeakTSH"];
 
 async function main() {
   const issuer = process.argv[2] || wallet("ISSUER_SEED").address;
-  const client = await connect();
+  const client = await connect({ readOnly: true });
+  const { network_id: networkId } = (await client.request({ command: "server_info" })).result.info;
+  const features = Object.values((await client.request({ command: "feature" })).result.features);
+  const enabled = new Set(features.filter((x) => x.enabled).map((x) => x.name));
   const { account_data: a, account_flags: f } = (await client.request({ command: "account_info", account: issuer, ledger_index: "validated" })).result;
   const signers = (await client.request({ command: "account_objects", account: issuer, type: "signer_list", ledger_index: "validated" })).result.account_objects[0];
   const hooks = (await client.request({ command: "account_objects", account: issuer, type: "hook", ledger_index: "validated" })).result.account_objects;
@@ -30,8 +41,9 @@ async function main() {
     [!!remarks.legal_name, "SHOULD", `Legal name on-ledger${remarks.legal_name ? `: ${remarks.legal_name}` : ""}`],
     [!!remarks.prospectus_sha256, "SHOULD", "Prospectus digest on-ledger"],
     [true, "INFO", `Hooks installed: ${hooks.length ? hooks[0].Hooks.length : 0}`],
+    ...NEEDED.map((name) => [enabled.has(name), "MUST", `Amendment ${name} ${enabled.has(name) ? "enabled" : "NOT enabled on this network"}`]),
   ];
-  console.log(`Preflight for ${issuer}\n`);
+  console.log(`Preflight for ${issuer} on ${NETWORK} (NetworkID ${networkId})\n`);
   let blockers = 0;
   for (const [ok, level, msg] of rows) {
     if (!ok && level === "MUST") blockers++;

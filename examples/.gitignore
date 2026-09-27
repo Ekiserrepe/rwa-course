@@ -4,3 +4,4 @@ node_modules/
 snapshot.json
 capstone/accounts.json
 verify/last-run.log
+coupon-journal.json

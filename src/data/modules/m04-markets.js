@@ -106,7 +106,7 @@ Each offer has a \`quality\`, \`TakerPays / TakerGets\` in the offer's own units
 
 ### Why an offer, and not "send us money"?
 
-With a plain "pay us and we'll send you tokens" process, there's a moment when the investor has paid and doesn't have the tokens yet, and the issuer has to be trusted to deliver. An offer on the DEX is **delivery versus payment**: the investor's USD and the treasury's HBOND swap in the same transaction, or nothing happens. [Module 9](?m=9&l=1) shows how a Hook can give the "pay us" flow the same guarantee.
+With a plain "pay us and we'll send you tokens" process, there's a moment when the investor has paid and doesn't have the tokens yet, and the issuer has to be trusted to deliver. An offer on the DEX is **delivery versus payment**: the investor's USD and the treasury's HBOND swap in the same transaction, or nothing happens. [Module 9](?m=9&l=1) shows how a Hook can make the "pay us" flow safe too: it checks everything before accepting the USD, and pays it back if the delivery fails. That is two steps with a refund, not one atomic swap, so the DEX remains the reference.
 
 ### The offer only sells what the treasury holds
 

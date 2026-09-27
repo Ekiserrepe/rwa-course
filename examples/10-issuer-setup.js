@@ -3,11 +3,13 @@
 //   node 10-issuer-setup.js --remove-empty-lines
 //
 // Order matters: RequireAuth and AllowTrustLineClawback can only be switched on
-// while no trust line to the issuer exists, so they come first, before any
-// holder exists. AccountSet takes one SetFlag per transaction.
+// while the issuer's owner directory is empty: no trust line to it, and no
+// object of its own (signer list, oracle, offer, escrow, Hook…). Otherwise the
+// ledger answers tecOWNERS. So they come first, before any holder exists.
+// AccountSet takes one SetFlag per transaction.
 //
-// If lines already exist, the script stops before sending anything. Lines of
-// the course's own roles that hold nothing can be removed first with
+// If the directory isn't empty, the script stops before sending anything.
+// Lines of the course's own roles that hold nothing can be removed first with
 // --remove-empty-lines (each holder sets its limit to 0, with tfSetNoRipple).
 //
 // Run first (from examples/): node 01-create-accounts.js, and nothing that opens
@@ -36,11 +38,13 @@ async function main() {
 
   const info = async () => (await client.request({ command: "account_info", account: issuer.address, ledger_index: "validated" })).result;
   const lines = async () => (await client.request({ command: "account_lines", account: issuer.address, ledger_index: "validated" })).result.lines;
+  // Everything in the owner directory: trust lines (either side) and the account's own objects
+  const objects = async () => (await client.request({ command: "account_objects", account: issuer.address, ledger_index: "validated" })).result.account_objects;
   const flags = (await info()).account_flags;
   const pending = !flags.requireAuthorization || !flags.allowTrustLineClawback;
 
-  // 1. RequireAuth and clawback need an issuer with no trust lines at all
-  if (pending && (await lines()).length > 0) {
+  // 1. RequireAuth and clawback need an empty owner directory
+  if (pending && (await objects()).length > 0) {
     const roles = courseRoles();
     if (process.argv.includes("--remove-empty-lines")) {
       for (const line of await lines()) {
@@ -53,11 +57,13 @@ async function main() {
         }, `${role.toLowerCase()}: remove its empty trust line`);
       }
     }
-    const left = await lines();
+    const left = await objects();
     if (left.length > 0) {
-      console.error("✘ The issuer already has trust lines, so RequireAuth and clawback can't be switched on:");
-      for (const l of left) console.error(`    ${roles[l.account] ?? l.account}  balance ${l.balance}`);
+      console.error("✘ The issuer's owner directory isn't empty, so RequireAuth and clawback can't be switched on:");
+      for (const l of await lines()) console.error(`    trust line  ${roles[l.account] ?? l.account}  balance ${l.balance}`);
+      for (const o of left.filter((o) => o.LedgerEntryType !== "RippleState")) console.error(`    ${o.LedgerEntryType}  ${o.index}`);
       console.error("  Lines of course roles that hold nothing: run again with --remove-empty-lines.");
+      console.error("  Other objects (signer list, oracle, offer…): delete them first.");
       console.error("  Lines that hold tokens, or belong to other accounts: start over with a new issuer (node 01-create-accounts.js).");
       process.exit(1);
     }

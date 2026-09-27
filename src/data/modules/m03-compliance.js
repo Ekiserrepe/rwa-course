@@ -131,7 +131,8 @@ So:
 
 - A **regular freeze** stops the holder getting rid of the token, but not receiving more. Use it for "stop this account selling" (a dispute, a sanctions hit under review).
 - A **deep freeze** stops the holder receiving as well, so the frozen position can't grow. Use it when the account itself is the problem (stolen keys, a sanctioned party).
-- In **both**, the holder can still **return tokens to the issuer**, and the issuer can still pay them. That's deliberate: a frozen holder can always be redeemed or refunded, never trapped.
+- In **both**, the holder can still **return tokens to the issuer**, and the issuer can still pay them. That's deliberate: a frozen position always has a way out through the issuer.
+- That way out is **not the DEX**. A frozen holder's offers to sell the token count as unfunded, so they can't sell into the redemption window ([Module 5](?m=5&l=3)). Redeem a frozen holder through the issuer instead, as that lesson shows.
 
 \`\`\`
 ✔ freeze alice: tesSUCCESS
@@ -313,7 +314,9 @@ BOB is a fully approved HBOND holder, but the treasury didn't list him, so his p
 
 ### Related: refusing incoming objects
 
-Xahau also has \`asfDisallowIncomingTrustline\`, \`asfDisallowIncomingCheck\`, \`asfDisallowIncomingPayChan\` and \`asfDisallowIncomingRemit\` (flag 16, which [Module 2](?m=2&l=0) warns not to confuse with clawback). They stop other accounts from creating those objects against yours, which keeps spam out of an issuer's directory.
+Xahau also has \`asfDisallowIncomingTrustline\`, \`asfDisallowIncomingCheck\`, \`asfDisallowIncomingPayChan\` and \`asfDisallowIncomingRemit\` (flag 16, which [Module 2](?m=2&l=0) warns not to confuse with clawback). They stop other accounts from creating those objects against yours, which keeps spam out of an account's directory.
+
+Set them on **operational accounts** (the treasury, a vault, a desk), never \`asfDisallowIncomingTrustline\` on the **issuer**: every investor's trust line is an incoming trust line to the issuer, so the flag would stop anyone from requesting one. RequireAuth already keeps unapproved lines from holding anything.
 
 ### In the Xahau docs
 

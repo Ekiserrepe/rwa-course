@@ -7,14 +7,14 @@
 //
 // Run first (from examples/):
 //   node 01-create-accounts.js
-const { connect, wallet, submit, toHex, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, toHex, dec, BOND_CODE } = require("./lib/xahau");
 
 const DOCUMENT_ID = 1; // one publisher can own several oracles, told apart by this
 
 function toScaled(price) {
   const [, decimals = ""] = String(price).split(".");
   const Scale = decimals.length;
-  return { AssetPrice: Math.round(Number(price) * 10 ** Scale).toString(16), Scale };
+  return { AssetPrice: dec(price).shiftedBy(Scale).toString(16), Scale };
 }
 
 async function main() {
@@ -28,7 +28,7 @@ async function main() {
     Provider: toHex("harbor-bond-administrator"),  // fixed at creation
     AssetClass: toHex("bond"),                     // fixed at creation
     URI: toHex("https://harbor-bond.example/nav"),
-    LastUpdateTime: Math.floor(Date.now() / 1000), // Unix time, must be close to the ledger's clock
+    LastUpdateTime: Math.floor(Date.now() / 1000), // Unix time, within 300 s of the ledger's close time
     PriceDataSeries: [{
       PriceData: { BaseAsset: BOND_CODE, QuoteAsset: "USD", ...toScaled(nav) },
     }],

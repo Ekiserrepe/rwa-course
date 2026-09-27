@@ -3,7 +3,7 @@
 //
 // Run first, once, in this order (from examples/, after 01-create-accounts.js):
 //   node 60-publish-nav.js
-const { connect, wallet, currencyName } = require("./lib/xahau");
+const { connect, wallet, currencyName, dec } = require("./lib/xahau");
 
 async function main() {
   const publisher = process.argv[2] || wallet("ISSUER_SEED").address;
@@ -21,7 +21,7 @@ async function main() {
   console.log(`  provider: ${Buffer.from(node.Provider, "hex").toString()}, class: ${Buffer.from(node.AssetClass, "hex").toString()}`);
   console.log(`  updated ${age}s ago (${new Date(node.LastUpdateTime * 1000).toISOString()})`);
   for (const { PriceData: p } of node.PriceDataSeries) {
-    const price = parseInt(p.AssetPrice, 16) / 10 ** (p.Scale ?? 0);
+    const price = dec(BigInt("0x" + p.AssetPrice).toString()).shiftedBy(-(p.Scale ?? 0));
     console.log(`  ${currencyName(p.BaseAsset)}/${currencyName(p.QuoteAsset)} = ${price}`);
   }
   // The same through get_aggregate_price, built for combining several

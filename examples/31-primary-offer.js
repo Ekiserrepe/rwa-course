@@ -9,18 +9,18 @@
 //   node 12-treasury-line.js
 //   node 13-issue-supply.js
 //   node 30-stablecoin-setup.js
-const { connect, wallet, submit, bond, usd } = require("./lib/xahau");
+const { connect, wallet, submit, bond, usd, dec } = require("./lib/xahau");
 
 async function main() {
-  const amount = Number(process.argv[2] ?? 5000);
-  const price = Number(process.argv[3] ?? 100);
+  const amount = dec(process.argv[2] ?? 5000);
+  const price = dec(process.argv[3] ?? 100);
   const client = await connect();
   const treasury = wallet("TREASURY_SEED");
 
   const { meta } = await submit(client, treasury, {
     TransactionType: "OfferCreate",
     TakerGets: bond(amount),          // what the treasury gives
-    TakerPays: usd(amount * price),   // what it wants in return
+    TakerPays: usd(amount.times(price)),   // what it wants in return
   }, `offer ${amount} HBOND at ${price} USD`);
 
   const offer = meta.AffectedNodes.find((n) => n.CreatedNode?.LedgerEntryType === "Offer")?.CreatedNode;

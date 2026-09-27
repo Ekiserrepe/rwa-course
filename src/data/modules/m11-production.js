@@ -19,7 +19,7 @@ export default {
 
 Any other term: see the [Glossary](?m=0&l=9).
 
-The code in this course runs on mainnet unchanged. What changes is everything around it.
+The code in this course runs on mainnet unchanged, with one deliberate lock: \`lib/xahau.js\` refuses to connect to any network but testnet unless you set \`ALLOW_MAINNET=1\`. Some scripts set flags that can never be undone (clawback, RequireAuth), and a stray \`NETWORK\` variable must not be enough to set them on a real account. Read-only scripts such as \`90-preflight.js\` connect anywhere. What changes is everything around the code.
 
 ### Network
 
@@ -33,13 +33,17 @@ Set \`NETWORK\` in the environment; \`autofill\` sets \`NetworkID\` from the nod
 
 ### Features: check, don't assume
 
-Every feature this course uses was **enabled on mainnet** when it was written: \`Clawback\`, \`DeepFreeze\`, \`PriceOracle\`, \`PaychanAndEscrowForTokens\`, \`Remarks\`, \`URIToken\`, \`Hooks\`, \`DepositAuth\`, \`HookCanEmit\`. Testnet runs ahead and has amendments mainnet doesn't (at the time of writing, for example \`HookOnV2\` and \`AMMClawback\`). Before launch, ask the mainnet node itself:
+Every feature this course uses was **enabled on mainnet** when it was written (September 2026, nodes on release 2026.6.21): \`Clawback\`, \`DeepFreeze\`, \`PriceOracle\`, \`PaychanAndEscrowForTokens\`, \`Remarks\`, \`URIToken\`, \`Hooks\`, \`HookCanEmit\`, \`IOUIssuerWeakTSH\`, \`DepositAuth\`, \`DepositPreauth\`. Some are recent, and testnet runs ahead with amendments mainnet doesn't have (at the time of writing, for example \`HookOnV2\` and \`AMMClawback\`). Before launch, ask the mainnet node itself:
 
 \`\`\`json
 { "command": "feature" }
 \`\`\`
 
-and check that every amendment your flows depend on is \`"enabled": true\`.
+and check that every amendment your flows depend on is \`"enabled": true\`. \`90-preflight.js\` does exactly that, and counts a missing one as a blocker:
+
+\`\`\`bash
+NETWORK=wss://xahau.network node 90-preflight.js rYourIssuer
+\`\`\`
 
 ### Real costs
 
@@ -60,7 +64,7 @@ In the course, scripts sign for investors with seeds from \`.env\`. In productio
       slides: [
         {
           title: { en: "Mainnet" },
-          content: { en: "wss://xahau.network · NetworkID 21337\nCheck every amendment you rely on (feature)\nInvestors need XAH for their reserves\nInvestors sign in their own wallet" },
+          content: { en: "wss://xahau.network · NetworkID 21337\nScripts refuse mainnet without ALLOW_MAINNET=1\nPreflight checks every amendment you rely on\nInvestors need XAH and sign in their own wallet" },
           visual: "🚀",
         },
       ],
@@ -78,7 +82,7 @@ A token that pays interest and principal, or a share of a company's profits, is 
 - **Who may buy it** (professional investors only? residents of which countries?). → Your KYC criteria and whether RequireAuth approval depends on investor category.
 - **Whether a prospectus is required**, and its disclosures. → The \`prospectus_sha256\` remark ([Module 2](?m=2&l=4)).
 - **Who may operate the market**. Trading a security between investors may need a licensed venue in some jurisdictions. → Whether you let holders use the public DEX, or restrict secondary trading.
-- **Whether the ledger may be the legal register** ([Module 1](?m=1&l=4)). → How much freeze and clawback you need.
+- **Whether the ledger may be the legal register** ([Module 1](?m=1&l=1)). → How much freeze and clawback you need.
 
 Regimes differ widely by country and change often. In the EU, for example, the crypto-asset regulation (MiCA, Regulation (EU) 2023/1114) explicitly **excludes** tokens that are financial instruments; those fall under existing securities law (MiFID II, the Prospectus Regulation), and a separate DLT Pilot Regime (Regulation (EU) 2022/858) covers trading and settlement infrastructure built on distributed ledgers. Other jurisdictions draw these lines differently. Ask, don't assume.
 
@@ -170,6 +174,8 @@ The course's \`npm run verify\` reruns every script against testnet and checks e
         en: `\`90-preflight.js\` reads an issuer account and reports what's ready, as **MUST** (don't launch without it), **SHOULD** (decide consciously) and **INFO**. Against the course's ISSUER after [Module 8](?m=8&l=0):
 
 \`\`\`
+Preflight for rGqGCX7AAGiCosU5oV1t9oKusS5NDFUKgt on wss://xahau-test.net (NetworkID 21338)
+
   ✔ MUST   RequireAuth: only approved accounts can hold the token
   ✔ MUST   DefaultRipple: holders can transfer to each other
   ✔ MUST   NoFreeze is off: you can still freeze in an emergency
@@ -182,6 +188,17 @@ The course's \`npm run verify\` reruns every script against testnet and checks e
   ✔ SHOULD Legal name on-ledger: Harbor Bond SPV Ltd.
   ✔ SHOULD Prospectus digest on-ledger
   ✔ INFO   Hooks installed: 0
+  ✔ MUST   Amendment Clawback enabled
+  ✔ MUST   Amendment DeepFreeze enabled
+  ✔ MUST   Amendment DepositAuth enabled
+  ✔ MUST   Amendment DepositPreauth enabled
+  ✔ MUST   Amendment PriceOracle enabled
+  ✔ MUST   Amendment PaychanAndEscrowForTokens enabled
+  ✔ MUST   Amendment Remarks enabled
+  ✔ MUST   Amendment URIToken enabled
+  ✔ MUST   Amendment Hooks enabled
+  ✔ MUST   Amendment HookCanEmit enabled
+  ✔ MUST   Amendment IOUIssuerWeakTSH enabled
 
 No blockers.
 \`\`\`

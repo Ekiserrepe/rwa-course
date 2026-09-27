@@ -76,7 +76,22 @@ Each coupon payment carries a **memo** with the record date's ledger:
 "Memos": [{ "Memo": { "MemoType": "636F75706F6E", "MemoData": "636F75706F6E3A3132353036353132" } }]
 \`\`\`
 
-That's hex for \`coupon\` and \`coupon:12506512\`. Before paying, the script reads the treasury's own history (\`account_tx\`) and skips every holder that already received a successful payment with that tag. The ledger is the log, so there's no local state to lose.
+That's hex for \`coupon\` and \`coupon:12506512\`. Before paying, the script reads the treasury's own history (\`account_tx\`) and skips every holder that already received a successful payment with that tag.
+
+### Payments in flight
+
+\`account_tx\` shows only **validated** transactions. A payment the script submitted just before it crashed may still be on its way: not in the history yet, but about to validate. A rerun that trusted the history alone would pay that holder a second time.
+
+So the script keeps a small **journal**. Before submitting each payment it writes the payment's hash and its \`LastLedgerSequence\` to \`coupon-journal.json\`, and only then sends it. On a rerun, for every journaled payment not yet in the history:
+
+| The ledger says | The script |
+|---|---|
+| Validated with \`tesSUCCESS\` | Counts the holder as paid |
+| Validated with a failure | Pays again |
+| Not found, and \`LastLedgerSequence\` has passed | Pays again: after that ledger it can never validate |
+| Not found, \`LastLedgerSequence\` not reached | Leaves the holder alone and asks you to run again in a few seconds |
+
+\`LastLedgerSequence\` is what makes the third row safe: \`autofill\` sets it a few ledgers ahead, and a transaction not validated by then is dead for good. The history and the journal together cover every moment of a crash.
 
 \`\`\`
   would pay r4EWm17wpwAvThQQGGr9TCxN2aKaUKBSYP 400 USD
@@ -118,7 +133,7 @@ You could let a Hook pay everyone when triggered, but a Hook can emit only a sma
       slides: [
         {
           title: { en: "Idempotent Payouts" },
-          content: { en: "Memo: coupon:<record ledger>\nBefore paying, read account_tx\nAlready tagged → skip\n\nRerun after a crash = safe" },
+          content: { en: "Memo: coupon:<record ledger>\nJournal hash + LastLedgerSequence, then send\nRerun: validated → skip · expired → retry\nin flight → wait\n\nRerun after a crash = safe" },
           visual: "🔁",
         },
       ],
@@ -217,7 +232,7 @@ The intuitive design uses two transactions:
 1. The holder pays its HBOND back to the issuer (tokens paid to their issuer are destroyed).
 2. The treasury pays the holder face value in USD.
 
-If the treasury is short when the second one runs, the result is this:
+If the treasury is short when the second one runs, the result is this (balances in this module depend on which earlier demos you ran, so yours will differ):
 
 \`\`\`
 ✔ bob: return 296.5 HBOND to the issuer: tesSUCCESS
@@ -225,11 +240,13 @@ If the treasury is short when the second one runs, the result is this:
   BOB now holds 0 HBOND
 \`\`\`
 
-BOB has given up his bonds and received nothing. Two separate transactions are **not atomic**: the first can succeed and the second fail, and the holder is left trusting the issuer to pay. On mainnet that is a default. Don't redeem with two payments.
+BOB has given up his bonds and received nothing. Two separate transactions are **not atomic**: the first can succeed and the second fail, and the holder is left trusting the issuer to pay. On mainnet that is a default. Don't ask holders to redeem with two payments.
 
 ### The correct design: delivery versus payment on the DEX
 
 At maturity, the treasury posts **one standing bid** for the whole outstanding supply at face value: "I give 100 USD for each HBOND". Each holder sells into it with Fill or Kill. HBOND and USD swap in the **same** transaction: full principal, or nothing moves.
+
+The treasury's unsold primary offer from [Module 4](?m=4&l=1) is still on the book, selling HBOND for USD at the same price. The bid would cross it, and when two offers from the same account cross, the ledger removes the older one. \`44-redemption-window.js\` cancels it explicitly first: at maturity the primary sale is over, and a script should say what it removes.
 
 Before opening the window, make sure the treasury can pay the **whole** principal. By maturity it has usually spent part of what it raised (on the asset, coupons, the reserve), so the principal comes from selling or refinancing the asset. \`44-redemption-window.js\` refuses to open until the money is there. Here it refuses, the asset-sale proceeds arrive, and then both holders redeem:
 
@@ -238,6 +255,7 @@ Outstanding: 810 HBOND. Principal due: 81000 USD. Treasury holds 5101.25 USD unl
 ✘ Short by 75898.75 USD: fund the treasury first
 ✔ asset sale proceeds: tesSUCCESS
 Outstanding: 810 HBOND. Principal due: 81000 USD. Treasury holds 105101.25 USD unlocked.
+✔ close the primary offer (4949 HBOND unsold): tesSUCCESS
 ✔ redemption window: buy 810 HBOND at 100 USD: tesSUCCESS
 ✔ alice: redeem 504 HBOND for 50400 USD: tesSUCCESS
   ALICE: 0 HBOND, 57898.75 USD
@@ -252,6 +270,15 @@ Three safeguards live in the scripts:
 - **Refuse to open an unfunded window.** \`44-redemption-window.js\` compares the principal due with the treasury's **unlocked** USD before posting: money sitting in an escrow (lesson 3) shows in the trust line's balance but can't pay anyone. (If it posted anyway, the DEX would simply skip the unfunded part and each holder's Fill or Kill would fail cleanly: nobody could lose, but the promise would be broken in public.)
 - **Fill or Kill on the holder's side**: all of their tokens at face value, or nothing.
 - **Retire the supply.** After the window, the treasury holds the redeemed tokens plus any it never sold. \`46-retire-supply.js\` pays them all to the issuer, which destroys them. \`gateway_balances\` then reports no obligations: the bond has provably ceased to exist.
+
+### Frozen holders
+
+A frozen holder can't use the window: their offers to sell HBOND count as unfunded. That covers a regular freeze, a deep freeze, a holder frozen by the holding cap ([Module 9](?m=9&l=2)) and one frozen for sanctions. For them the issuer runs the two steps itself, in the order that never leaves the holder empty-handed:
+
+1. The treasury pays the principal in USD (HBOND's freeze doesn't touch the USD line).
+2. The issuer **claws back** the tokens ([Module 3](?m=3&l=3)), which destroys them.
+
+The issuer controls both steps, so nobody depends on the frozen holder signing anything, and the holder is paid before losing the bonds. Where sanctions forbid paying the holder at all, the principal waits for the authorities' decision; the tokens stay frozen meanwhile.
 
 ### Holders who don't show up
 
@@ -282,7 +309,7 @@ Some holders will miss the window. The bid stays on the book for them as long as
       slides: [
         {
           title: { en: "Two Payments ≠ Atomic" },
-          content: { en: "Holder returns tokens ✔\nTreasury pays ✘ tecPATH_PARTIAL\n→ holder has nothing\n\nNever split DvP into two steps" },
+          content: { en: "Holder returns tokens ✔\nTreasury pays ✘ tecPATH_PARTIAL\n→ holder has nothing\n\nDon't make holders redeem in two steps" },
           visual: "💥",
         },
         {

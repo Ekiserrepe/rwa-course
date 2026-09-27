@@ -32,7 +32,7 @@ async function main() {
 
   // A year later the valuer updates the figure; the parcel cannot change
   await submit(client, issuer, { TransactionType: "SetRemarks", ObjectID: id, Remarks: [remark("valuation", "1185000 USD @ 2027-06-30")] }, "update valuation");
-  await submit(client, issuer, { TransactionType: "SetRemarks", ObjectID: id, Remarks: [remark("parcel", "PX-0000-0000")] }, "try to change the parcel");
+  await submit(client, issuer, { TransactionType: "SetRemarks", ObjectID: id, Remarks: [remark("parcel", "PX-0000-0000")] }, "try to change the parcel", { expect: ["tecIMMUTABLE"] });
 
   const token = await getObject(client, id);
   for (const { Remark: r } of token.Remarks) {

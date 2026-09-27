@@ -18,7 +18,7 @@
 //   node hooks/install-lockbox.js
 //   node hooks/lock-tokens.js BOB BOB 20 60  (it prints the lock ID to pass here)
 const crypto = require("crypto");
-const { connect, wallet, submit, trustLine, BOND_CODE } = require("../lib/xahau");
+const { connect, wallet, submit, trustLine, dec, BOND_CODE } = require("../lib/xahau");
 const { param } = require("./lib");
 const { encodeAccountID } = require("xahau");
 
@@ -26,17 +26,17 @@ const RIPPLE_EPOCH = 946684800;
 const NAMESPACE = crypto.createHash("sha256").update("lockbox").digest("hex").toUpperCase();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** XFL, the Hooks' 64-bit decimal float, to a JavaScript number. */
+/** XFL, the Hooks' 64-bit decimal float, to an exact decimal. */
 function fromXFL(hex) {
   const x = BigInt("0x" + hex);
-  if (x === 0n) return 0;
-  const mantissa = Number(x & ((1n << 54n) - 1n));
+  if (x === 0n) return dec(0);
+  const mantissa = dec((x & ((1n << 54n) - 1n)).toString());
   const exponent = Number((x >> 54n) & 0xffn) - 97;
   const positive = (x >> 62n) & 1n;
-  return (positive ? 1 : -1) * mantissa * 10 ** exponent;
+  return mantissa.shiftedBy(exponent).times(positive ? 1 : -1);
 }
 
-/** The lock as the Hook stored it: owner, beneficiary, amount, release time. */
+/** The lock as the Hook stored it: owner, beneficiary, amount, release time, status. */
 async function readLock(client, vault, id) {
   try {
     const { node } = (await client.request({
@@ -50,6 +50,7 @@ async function readLock(client, vault, id) {
       beneficiary: encodeAccountID(Buffer.from(d.slice(40, 80), "hex")),
       amount: fromXFL(d.slice(80, 96)),
       after: new Date((parseInt(d.slice(96, 104), 16) + RIPPLE_EPOCH) * 1000),
+      releasing: d.slice(104, 106) === "01", // a release payment is on its way
     };
   } catch (err) {
     if (err.data?.error === "entryNotFound") return null;
@@ -67,7 +68,7 @@ async function main() {
   const issuer = wallet("ISSUER_SEED").address;
 
   const lock = await readLock(client, vault, id);
-  if (lock) console.log(`  lock: ${lock.amount} HBOND for ${lock.beneficiary}, after ${lock.after.toISOString()}`);
+  if (lock) console.log(`  lock: ${lock.amount} HBOND for ${lock.beneficiary}, after ${lock.after.toISOString()}${lock.releasing ? " (release in flight)" : ""}`);
   const before = lock && await trustLine(client, lock.beneficiary, issuer, BOND_CODE);
 
   const { code } = await submit(client, wallet(`${role}_SEED`), {
@@ -81,7 +82,7 @@ async function main() {
     for (let i = 0; i < 10; i++) {
       await sleep(2000);
       const now = await trustLine(client, lock.beneficiary, issuer, BOND_CODE);
-      if (Number(now.balance) !== Number(before.balance)) {
+      if (!dec(now.balance).eq(before.balance)) {
         console.log(`  beneficiary: ${before.balance} -> ${now.balance} HBOND`);
         break;
       }

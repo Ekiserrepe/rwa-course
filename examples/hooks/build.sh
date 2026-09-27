@@ -2,6 +2,8 @@
 # build.sh: compile a Hook written in C into the .wasm that SetHook installs
 #   sh hooks/build.sh subscription_desk
 #
+# Exports hook() and, when the source defines one, cbak() (the callback).
+#
 # Needs two tools, on your PATH or named in CLANG / HOOK_CLEANER:
 #   - a clang (LLVM) that can target wasm32
 #   - hook-cleaner (https://github.com/XRPLF/hook-cleaner-c)
@@ -24,9 +26,11 @@ command -v "$HOOK_CLEANER" > /dev/null 2>&1 || {
   exit 1
 }
 # -mcpu=mvp: xahaud rejects the post-MVP WebAssembly features newer clang emits
+EXPORTS="-Wl,--export=hook"
+grep -q "int64_t cbak(" "$NAME.c" && EXPORTS="$EXPORTS -Wl,--export=cbak"
 "$CLANG" --target=wasm32-unknown-unknown -mcpu=mvp -O2 -Wall -Wno-int-conversion \
   -nostdlib -ffreestanding -fno-builtin -Iinclude \
-  -Wl,--no-entry -Wl,--allow-undefined -Wl,--export=hook \
+  -Wl,--no-entry -Wl,--allow-undefined $EXPORTS \
   -o "$NAME.raw.wasm" "$NAME.c"
 "$HOOK_CLEANER" "$NAME.raw.wasm" "$NAME.wasm" > /dev/null 2>&1
 rm "$NAME.raw.wasm"

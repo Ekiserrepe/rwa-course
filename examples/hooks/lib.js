@@ -21,7 +21,11 @@ const param = (name, hexValue) => ({
   HookParameter: { HookParameterName: Buffer.from(name).toString("hex").toUpperCase(), HookParameterValue: hexValue },
 });
 
-/** SetHook with the compiled .wasm from this folder, in slot 1. */
+// HookOn is a bitmap in which a 0 bit means "fire": all zeros fires on every
+// transaction type (except SetHook, whose bit works the other way round)
+const ALL_TYPES = "0".repeat(64);
+
+/** SetHook with the compiled .wasm from this folder, in slot 1. `on`: a list of types, or "all". */
 async function install(client, account, name, { on, params = [], collect = false }) {
   if (collect) {
     // Collect call, part 1: the account agrees to pay for its weak executions
@@ -32,7 +36,7 @@ async function install(client, account, name, { on, params = [], collect = false
     Hooks: [{
       Hook: {
         CreateCode: fs.readFileSync(path.join(__dirname, `${name}.wasm`)).toString("hex").toUpperCase(),
-        HookOn: calculateHookOn(on),
+        HookOn: on === "all" ? ALL_TYPES : calculateHookOn(on),
         HookNamespace: crypto.createHash("sha256").update(name).digest("hex").toUpperCase(),
         HookApiVersion: 0,
         HookParameters: params,

@@ -19,9 +19,9 @@ fs.writeFileSync(LOG, "");
 const results = [];
 const SKIP_ACCOUNTS = process.argv.includes("--reuse-accounts");
 
-function sh(args, { timeout = 240_000 } = {}) {
+function sh(args, { timeout = 240_000, env = {} } = {}) {
   return new Promise((resolve) => {
-    const p = spawn("node", args, { cwd: EX, env: process.env });
+    const p = spawn("node", args, { cwd: EX, env: { ...process.env, ...env } });
     let out = "";
     p.stdout.on("data", (d) => (out += d));
     p.stderr.on("data", (d) => (out += d));
@@ -52,6 +52,8 @@ if (!SKIP_ACCOUNTS) {
 await step("m0 00-wallet-basics", ["00-wallet-basics.js"], [/Balance:\s+1000 XAH/, /Spendable:\s+999 XAH/], { timeout: 600_000 });
 await step("m0 00-anatomy-of-a-transaction", ["00-anatomy-of-a-transaction.js"], [/NetworkID: 21338/, /4\. Result: tesSUCCESS/, /validated = true/]);
 await step("m0 00-look-around", ["00-look-around.js"], [/NetworkID 21338/, /reserves 1 \+ 0\.2 XAH/]);
+await step("m0 both seed types load their own account", ["-e", 'const {Wallet}=require("xahau");const {wallet}=require("./lib/xahau");for(const a of ["ed25519","ecdsa-secp256k1"]){const w=Wallet.generate(a);process.env.X_SEED=w.seed;console.log(a, wallet("X_SEED").address===w.address?"same account":"WRONG account")}'], [/ed25519 same account/, /secp256k1 same account/]);
+await step("m0 mainnet refused without ALLOW_MAINNET", ["21-transfer.js", "TREASURY", "ALICE", "1"], [/not testnet \(21338\)/], { exit: 1, env: { NETWORK: "wss://xahau.network" } });
 
 // ── Module 2: issuing ───────────────────────────────────────────────────────
 await step("m2 11-currency-code", ["11-currency-code.js"], [/HBOND\s+-> 48424F4E44000000000000000000000000000000/, /XAH\s+-> ✘ XAH is reserved/]);
@@ -67,17 +69,17 @@ await step("m3 20 onboard bob", ["20-onboard-investor.js", "BOB", "--approve"], 
 await step("m3 20 carol requests only", ["20-onboard-investor.js", "CAROL"], [/CAROL: .*authorised: false/]);
 await step("m3 21 treasury -> alice", ["21-transfer.js", "TREASURY", "ALICE", "500"], [/✔ .*tesSUCCESS/, /ALICE\s+500/]);
 await step("m3 21 treasury -> bob", ["21-transfer.js", "TREASURY", "BOB", "300"], [/✔ .*tesSUCCESS/]);
-await step("m3 21 treasury -> carol refused", ["21-transfer.js", "TREASURY", "CAROL", "10"], [/tecPATH_DRY/]);
+await step("m3 21 treasury -> carol refused", ["21-transfer.js", "TREASURY", "CAROL", "10"], [/tecPATH_DRY/], { exit: 1 });
 await step("m3 21 alice -> bob", ["21-transfer.js", "ALICE", "BOB", "50"], [/✔ .*tesSUCCESS/]);
 await step("m3 14 cap table", ["14-supply-report.js"], [/HBOND outside the treasury: 800/, /4 HBOND trust line\(s\)/]);
 await step("m3 22 freeze alice", ["22-freeze.js", "ALICE"], [/frozen by issuer = true, deep = false/]);
-await step("m3 21 frozen alice can't send", ["21-transfer.js", "ALICE", "BOB", "10"], [/tecPATH_DRY/]);
+await step("m3 21 frozen alice can't send", ["21-transfer.js", "ALICE", "BOB", "10"], [/tecPATH_DRY/], { exit: 1 });
 await step("m3 21 frozen alice can receive", ["21-transfer.js", "BOB", "ALICE", "10"], [/✔ .*tesSUCCESS/]);
 await step("m3 22 deep-freeze alice", ["22-freeze.js", "ALICE", "--deep"], [/deep = true/]);
-await step("m3 21 deep-frozen alice can't receive", ["21-transfer.js", "BOB", "ALICE", "10"], [/tecPATH_DRY/]);
+await step("m3 21 deep-frozen alice can't receive", ["21-transfer.js", "BOB", "ALICE", "10"], [/tecPATH_DRY/], { exit: 1 });
 await step("m3 22 unfreeze alice", ["22-freeze.js", "ALICE", "--off"], [/frozen by issuer = false, deep = false/]);
 await step("m3 23 global freeze", ["23-global-freeze.js"], [/globalFreeze = true/]);
-await step("m3 21 nothing moves", ["21-transfer.js", "ALICE", "BOB", "10"], [/tecPATH_DRY/]);
+await step("m3 21 nothing moves", ["21-transfer.js", "ALICE", "BOB", "10"], [/tecPATH_DRY/], { exit: 1 });
 await step("m3 23 global freeze off", ["23-global-freeze.js", "--off"], [/globalFreeze = false/]);
 await step("m3 24 clawback", ["24-clawback.js", "BOB", "50"], [/✔ claw back 50 HBOND from bob: tesSUCCESS/, /BOB: 340 -> 290 HBOND/]);
 await step("m3 25 deposit auth", ["25-deposit-auth.js"], [/✔ alice -> treasury: 1 HBOND: tesSUCCESS/, /✘ bob -> treasury: 1 HBOND: tecNO_PERMISSION/]);
@@ -88,8 +90,8 @@ await step("m4 31 primary offer", ["31-primary-offer.js", "5000", "100"], [/is o
 await step("m4 32 order book", ["32-order-book.js"], [/100\.00 USD\s+x 5000 HBOND\s+from TREASURY/]);
 await step("m4 33 alice buys", ["33-subscribe.js", "ALICE", "20"], [/✔ .*tesSUCCESS/, /ALICE now holds 479 HBOND and 8000 USD/]);
 await step("m4 33 bob buys", ["33-subscribe.js", "BOB", "30", "100"], [/✔ .*tesSUCCESS/]);
-await step("m4 33 carol refused", ["33-subscribe.js", "CAROL", "1"], [/tecNO_AUTH/]);
-await step("m4 33 price cap", ["33-subscribe.js", "ALICE", "5", "99"], [/tecKILLED/]);
+await step("m4 33 carol refused", ["33-subscribe.js", "CAROL", "1"], [/tecNO_AUTH/], { exit: 1 });
+await step("m4 33 price cap", ["33-subscribe.js", "ALICE", "5", "99"], [/tecKILLED/], { exit: 1 });
 const sell = await step("m4 34 alice asks 105", ["34-sell-offer.js", "ALICE", "10", "105"], [/✔ .*tesSUCCESS/]);
 await step("m4 32 two offers", ["32-order-book.js"], [/100\.00 USD\s+x 4950 HBOND/, /105\.00 USD\s+x 10 HBOND\s+from ALICE/]);
 await step("m4 34 cancel", ["34-sell-offer.js", "ALICE", "--cancel", grab(sell, /--cancel (\d+)/)], [/✔ .*tesSUCCESS/]);
@@ -97,11 +99,13 @@ await step("m4 34 cancel", ["34-sell-offer.js", "ALICE", "--cancel", grab(sell, 
 // ── Module 5: servicing ─────────────────────────────────────────────────────
 await step("m5 40 snapshot", ["40-holder-snapshot.js", "--save"], [/2 holder\(s\), 799 HBOND outside the treasury/, /Saved snapshot\.json/]);
 await step("m5 41 dry run", ["41-pay-coupon.js", "1.25", "--dry-run"], [/would pay r\w+ 598\.75 USD/, /would pay r\w+ 400 USD/]);
+// 479 × 1.15 is 550.85 exactly; in floating point it is 550.8499…, which a float floor pays as 550.84
+await step("m5 41 exact decimals", ["41-pay-coupon.js", "1.15", "--dry-run"], [/would pay r\w+ 550\.85 USD/, /would pay r\w+ 368 USD/]);
 await step("m5 41 pay", ["41-pay-coupon.js", "1.25"], [/Paid 998\.75 USD this run/]);
 await step("m5 41 rerun pays nobody", ["41-pay-coupon.js", "1.25"], [/already paid/, /Paid 0 USD this run/]);
 const reserve = await step("m5 42 reserve", ["42-coupon-reserve.js", "1000", "40"], [/✘ escrow 10 HBOND \(issuer has clawback\): tecNO_PERMISSION/, /✔ reserve 1000 USD for 40s: tesSUCCESS/, /of which locked 1000/]);
 const seq = grab(reserve, /43-release-escrow\.js (\d+)/);
-await step("m5 43 too early", ["43-release-escrow.js", seq], [/tecNO_PERMISSION/]);
+await step("m5 43 too early", ["43-release-escrow.js", seq], [/tecNO_PERMISSION/], { exit: 1 });
 await sleep(50_000);
 await step("m5 43 released", ["43-release-escrow.js", seq], [/✔ release escrow \d+: tesSUCCESS/, /of which locked 0/]);
 
@@ -134,15 +138,33 @@ await step("m9 who sees what", ["hooks/who-sees-what.js"], [/✔ alice -> bob 1 
 await step("m9 install desk", ["hooks/install-subscription-desk.js", "100"], [/✔ install subscription_desk: tesSUCCESS/]);
 await step("m9 prepare alice (already set up)", ["hooks/prepare-subscriber.js", "ALICE"], [/ALICE: HBOND line authorised: true/, /ALICE: [\d.]+ USD/]);
 await step("m9 desk: alice subscribes", ["hooks/subscribe-via-desk.js", "ALICE", "1000"], [/subscription accepted/, /ALICE: 478 -> 488 HBOND/]);
-await step("m9 desk: carol refused", ["hooks/subscribe-via-desk.js", "CAROL", "1000"], [/tecHOOK_REJECTED.*KYC pending/]);
-await step("m9 desk: partial refused", ["hooks/subscribe-via-desk.js", "BOB", "500", "--partial"], [/partial payments are refused/]);
+await step("m9 desk: carol refused", ["hooks/subscribe-via-desk.js", "CAROL", "1000"], [/tecHOOK_REJECTED.*KYC pending/], { exit: 1 });
+await step("m9 desk: partial refused", ["hooks/subscribe-via-desk.js", "BOB", "500", "--partial"], [/partial payments are refused/], { exit: 1 });
+// A delivery that fails after the desk accepted: ALICE pays, then (next sequence,
+// same ledger) lowers her HBOND limit to what she holds. The desk's callback refunds her.
+await step("m9 desk: failed delivery is refunded", ["-e", `
+const {connect,wallet,usd,bond,trustLine,BOND_CODE,dec}=require("./lib/xahau");
+(async()=>{const c=await connect();const a=wallet("ALICE_SEED");const t=wallet("TREASURY_SEED").address;const i=wallet("ISSUER_SEED").address;
+const h0=await trustLine(c,a.address,i,BOND_CODE);const u0=await trustLine(c,a.address,usd(0).issuer,"USD");
+const p=await c.autofill({TransactionType:"Payment",Account:a.address,Destination:t,Amount:usd(500)});
+const l=await c.autofill({TransactionType:"TrustSet",Account:a.address,LimitAmount:bond(h0.balance),Sequence:p.Sequence+1,LastLedgerSequence:p.LastLedgerSequence});
+const r1=c.submitAndWait(a.sign(p).tx_blob);const r2=c.submitAndWait(a.sign(l).tx_blob);
+console.log("pay",(await r1).result.meta.TransactionResult,"limit",(await r2).result.meta.TransactionResult);
+for(let k=0;k<15;k++){await new Promise(r=>setTimeout(r,2000));const u=await trustLine(c,a.address,usd(0).issuer,"USD");if(dec(u.balance).eq(u0.balance))break}
+const h1=await trustLine(c,a.address,i,BOND_CODE);const u1=await trustLine(c,a.address,usd(0).issuer,"USD");
+console.log(dec(u1.balance).eq(u0.balance)&&dec(h1.balance).eq(h0.balance)?"refunded in full":"NOT refunded "+u1.balance+" "+h1.balance);
+const tx=await c.autofill({TransactionType:"TrustSet",Account:a.address,LimitAmount:bond(1000000)});await c.submitAndWait(a.sign(tx).tx_blob);await c.disconnect()})()`], [/pay tesSUCCESS limit tesSUCCESS/, /refunded in full/], { timeout: 120_000 });
 await step("m9 remove desk", ["hooks/install-subscription-desk.js", "--remove"], [/✔ remove subscription_desk: tesSUCCESS/]);
 await step("m9 install cap", ["hooks/install-holding-cap.js", "500"], [/✔ install holding_cap: tesSUCCESS/]);
 await step("m9 within cap", ["21-transfer.js", "BOB", "ALICE", "5"], [/Cap: within the limit/]);
 await step("m9 over cap", ["21-transfer.js", "BOB", "ALICE", "10"], [/✔ .*tesSUCCESS.*Cap: limit exceeded, receiver frozen/]);
 await sleep(8000);
-await step("m9 alice is frozen", ["21-transfer.js", "ALICE", "BOB", "1"], [/tecPATH_DRY/]);
+await step("m9 alice is frozen", ["21-transfer.js", "ALICE", "BOB", "1"], [/tecPATH_DRY/], { exit: 1 });
 await step("m9 unfreeze alice", ["22-freeze.js", "ALICE", "--off"], [/✔ unfreeze alice: tesSUCCESS/]);
+// A payment whose Amount names the destination as "issuer" still moves HBOND: the cap reads the metadata
+await step("m9 over cap, Amount.issuer = destination", ["-e", 'const {connect,wallet,submit,bond,BOND_CODE}=require("./lib/xahau");(async()=>{const c=await connect();const a=wallet("ALICE_SEED").address;await submit(c,wallet("BOB_SEED"),{TransactionType:"Payment",Destination:a,Amount:{currency:BOND_CODE,issuer:a,value:"1"},SendMax:bond(1)},"bob -> alice 1 HBOND (issuer: alice)");await c.disconnect()})()'], [/✔ .*tesSUCCESS.*Cap: limit exceeded, receiver frozen/]);
+await sleep(8000);
+await step("m9 unfreeze alice (bypass test)", ["22-freeze.js", "ALICE", "--off"], [/frozen by issuer = false/]);
 // A DEX purchase must trip the cap too (HookOn includes OfferCreate). ALICE is still above 500.
 await step("m9 over cap on the DEX", ["33-subscribe.js", "ALICE", "1"], [/✔ .*tesSUCCESS.*Cap: limit exceeded, receiver frozen/]);
 await sleep(8000);
@@ -153,24 +175,36 @@ await step("m9 remove cap", ["hooks/install-holding-cap.js", "--remove"], [/✔ 
 await step("m9 install lockbox", ["hooks/install-lockbox.js"], [/✔ issuer: authorise vault: tesSUCCESS/, /✔ install lockbox: tesSUCCESS/]);
 const lockup = await step("m9 bob locks 20 for himself", ["hooks/lock-tokens.js", "BOB", "BOB", "20", "40"], [/✔ .*tesSUCCESS.*Lock: tokens locked/]);
 const lockupId = grab(lockup, /lock ([0-9A-F]{64})/);
-await step("m9 lock for carol refused", ["hooks/lock-tokens.js", "ALICE", "CAROL", "5", "40"], [/tecHOOK_REJECTED.*no authorised trust line/]);
-await step("m9 vault can't spend", ["21-transfer.js", "VAULT", "BOB", "1"], [/tecHOOK_REJECTED.*only through a release/]);
-await step("m9 release too early", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*too early/]);
+await step("m9 lock for carol refused", ["hooks/lock-tokens.js", "ALICE", "CAROL", "5", "40"], [/tecHOOK_REJECTED.*no authorised trust line/], { exit: 1 });
+await step("m9 vault can't spend", ["21-transfer.js", "VAULT", "BOB", "1"], [/tecHOOK_REJECTED.*only through a release/], { exit: 1 });
+await step("m9 release too early", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*too early/], { exit: 1 });
 const disputed = await step("m9 alice locks 10 for bob", ["hooks/lock-tokens.js", "ALICE", "BOB", "10", "3600"], [/✔ .*tesSUCCESS.*Lock: tokens locked/]);
 const disputedId = grab(disputed, /lock ([0-9A-F]{64})/);
 await step("m9 clawback from the vault", ["24-clawback.js", "VAULT", "10"], [/✔ claw back 10 HBOND from vault: tesSUCCESS/, /VAULT: 30 -> 20 HBOND/]);
-await step("m9 only the issuer voids", ["hooks/release-lock.js", "BOB", disputedId, "--void"], [/tecHOOK_REJECTED.*only the token's issuer/]);
+await step("m9 only the issuer voids", ["hooks/release-lock.js", "BOB", disputedId, "--void"], [/tecHOOK_REJECTED.*only the token's issuer/], { exit: 1 });
 await step("m9 issuer voids", ["hooks/release-lock.js", "ISSUER", disputedId, "--void"], [/✔ .*tesSUCCESS.*voided by the issuer/]);
 await step("m9 reissue to alice", ["21-transfer.js", "ISSUER", "ALICE", "10"], [/✔ .*tesSUCCESS/]);
 await sleep(40_000);
-await step("m9 release", ["hooks/release-lock.js", "ALICE", lockupId], [/✔ .*tesSUCCESS.*Lock: released/, /beneficiary: \d+(\.\d+)? -> \d+(\.\d+)? HBOND/, /vault holds 0 HBOND/]);
-await step("m9 released only once", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*no such lock/]);
+// A release whose payment fails after the Hook emitted it: BOB asks, then (next
+// sequence, same ledger) lowers his HBOND limit. The callback keeps the lock.
+await step("m9 failed release keeps the lock", ["-e", `
+const {connect,wallet,bond,trustLine,BOND_CODE}=require("./lib/xahau");const {param}=require("./hooks/lib");
+(async()=>{const c=await connect();const b=wallet("BOB_SEED");const i=wallet("ISSUER_SEED").address;const h=await trustLine(c,b.address,i,BOND_CODE);
+const inv=await c.autofill({TransactionType:"Invoke",Account:b.address,Destination:wallet("VAULT_SEED").address,HookParameters:[param("ID",process.argv[1])]});
+const l=await c.autofill({TransactionType:"TrustSet",Account:b.address,LimitAmount:bond(h.balance),Sequence:inv.Sequence+1,LastLedgerSequence:inv.LastLedgerSequence});
+const r1=c.submitAndWait(b.sign(inv).tx_blob);const r2=c.submitAndWait(b.sign(l).tx_blob);
+console.log("invoke",(await r1).result.meta.TransactionResult,"limit",(await r2).result.meta.TransactionResult);
+await new Promise(r=>setTimeout(r,10000));
+const tx=await c.autofill({TransactionType:"TrustSet",Account:b.address,LimitAmount:bond(1000000)});await c.submitAndWait(b.sign(tx).tx_blob);await c.disconnect()})()`, lockupId], [/invoke tesSUCCESS limit tesSUCCESS/], { timeout: 120_000 });
+// The lock survived the failed attempt: the release below still finds it
+await step("m9 release", ["hooks/release-lock.js", "ALICE", lockupId], [/lock: 20 HBOND for/, /✔ .*tesSUCCESS.*Lock: released/, /beneficiary: \d+(\.\d+)? -> \d+(\.\d+)? HBOND/, /vault holds 0 HBOND/]);
+await step("m9 released only once", ["hooks/release-lock.js", "ALICE", lockupId], [/tecHOOK_REJECTED.*no such lock/], { exit: 1 });
 
 // ── Module 5 (end of life) ──────────────────────────────────────────────────
 // The principal comes from selling the asset (Module 5, lesson 4): STABLE wires it
 await step("m5 44 refuses unfunded", ["44-redemption-window.js"], [/Short by [\d.]+ USD: fund the treasury first/], { exit: 1 });
 await step("m5 asset sale proceeds", ["-e", 'const {connect,wallet,submit,usd}=require("./lib/xahau");(async()=>{const c=await connect();await submit(c,wallet("STABLE_SEED"),{TransactionType:"Payment",Destination:wallet("TREASURY_SEED").address,Amount:usd(100000)},"asset sale proceeds");await c.disconnect()})()'], [/✔ asset sale proceeds: tesSUCCESS/]);
-await step("m5 44 window", ["44-redemption-window.js"], [/✔ redemption window: buy \d+(\.\d+)? HBOND at 100 USD: tesSUCCESS/]);
+await step("m5 44 window", ["44-redemption-window.js"], [/✔ close the primary offer \([\d.]+ HBOND unsold\): tesSUCCESS/, /✔ redemption window: buy \d+(\.\d+)? HBOND at 100 USD: tesSUCCESS/]);
 await step("m5 45 alice redeems", ["45-redeem.js", "ALICE"], [/✔ alice: redeem .*tesSUCCESS/, /ALICE: 0 HBOND/]);
 await step("m5 45 bob redeems", ["45-redeem.js", "BOB"], [/✔ bob: redeem .*tesSUCCESS/, /BOB: 0 HBOND/]);
 await step("m5 46 retire", ["46-retire-supply.js"], [/HBOND in existence: 0/]);

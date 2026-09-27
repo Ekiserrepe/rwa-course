@@ -9,9 +9,8 @@
 // Run first, once, in this order (from examples/, after 01-create-accounts.js):
 //   node 10-issuer-setup.js
 //   node 12-treasury-line.js
-const fs = require("fs");
 const { Wallet, xahToDrops } = require("xahau");
-const { connect, wallet, submit, trustLine, bond, BOND_CODE, ENV_FILE } = require("../lib/xahau");
+const { connect, wallet, submit, trustLine, bond, BOND_CODE, ENV_FILE, writeSecret } = require("../lib/xahau");
 const { install, remove, currencyBytes, accountBytes, param } = require("./lib");
 
 const tfSetfAuth = 0x00010000;
@@ -29,7 +28,7 @@ async function main() {
   //    sent, so a failure can never leave a funded account nobody can sign for.
   if (!process.env.VAULT_SEED) {
     const w = Wallet.generate("ecdsa-secp256k1");
-    fs.appendFileSync(ENV_FILE, `VAULT_SEED=${w.seed}\n`);
+    writeSecret(ENV_FILE, `VAULT_SEED=${w.seed}\n`, { append: true });
     process.env.VAULT_SEED = w.seed;
     console.log(`  VAULT ${w.address} (seed saved to .env)`);
   }
@@ -55,10 +54,10 @@ async function main() {
     }, "issuer: authorise vault");
   }
 
-  // 3. The Hook. Invoke carries releases; OfferCreate and CheckCreate are listed
-  //    so the vault's own key can't move locked tokens through the DEX or a check.
+  // 3. The Hook, on every transaction type: a list would leave out some route
+  //    (a Remit, a URIToken purchase…) by which the vault's key could move tokens
   await install(client, vault, "lockbox", {
-    on: ["Payment", "Invoke", "OfferCreate", "CheckCreate"],
+    on: "all",
     params: [param("TOK", currencyBytes(BOND_CODE) + accountBytes(issuer.address))],
   });
   await client.disconnect();

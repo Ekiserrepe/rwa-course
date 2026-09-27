@@ -33,7 +33,7 @@ async function main() {
   // 1. The catch: HBOND's issuer can claw back, so HBOND cannot be locked
   await submit(client, treasury, {
     TransactionType: "EscrowCreate", Destination: wallet("BOB_SEED").address, Amount: bond(10), ...times,
-  }, "escrow 10 HBOND (issuer has clawback)");
+  }, "escrow 10 HBOND (issuer has clawback)", { expect: ["tecNO_PERMISSION"] });
 
   // 2. USD can: its issuer never enabled clawback
   const { result, code } = await submit(client, treasury, {

@@ -43,7 +43,7 @@ Xahau has a native price-oracle object (the \`PriceOracle\` amendment, live on m
 
 - \`OracleDocumentID\` tells apart several oracles owned by the same account. Sending \`OracleSet\` again with the same ID **updates** it.
 - \`Provider\` and \`AssetClass\` describe who publishes and what kind of asset (both hex).
-- \`LastUpdateTime\` is **Unix** time (not ledger time!), and must be close to the ledger's own clock: an update stamped one hour in the past failed on testnet with \`tecINVALID_UPDATE_TIME\`.
+- \`LastUpdateTime\` is **Unix** time (not ledger time!). It must be within **300 seconds** of the closing time of the ledger that applies it, and later than the oracle's previous update; otherwise \`OracleSet\` fails with \`tecINVALID_UPDATE_TIME\`. Stamp it when you submit, from a clock kept in sync.
 - \`Provider\` and \`AssetClass\` are needed when the oracle is created; later updates may leave them out.
 - Prices are **integers with a scale**: \`AssetPrice\` is a hex string, so 100.37 is \`10037\` → \`"2735"\` with \`Scale: 2\`.
 - One oracle can carry several pairs (\`HBOND/USD\`, \`HBOND/EUR\`…).
@@ -128,7 +128,7 @@ Anything that acts on a price (a margin call, a collateral check, a subscription
 
 1. Pin the **publisher's address**, never trust an oracle just because its \`Provider\` text looks right.
 2. Check \`LastUpdateTime\` against your maximum age.
-3. Check the **base and quote assets** are the exact codes you expect (\`HBOND\` from this issuer, \`USD\`).
+3. Check the **base and quote assets** are the exact codes you expect. \`PriceData\` carries bare currency codes with **no issuer**: \`USD\` says nothing about *which* USD, and anyone can publish an oracle for a code called \`HBOND\`. The publisher's address (item 1) is the only thing that binds a price to your token, so write down, in your terms, which publisher and which document ID are authoritative, and which USD the price is quoted in.
 4. With several publishers, use the **median** and watch the spread.
 
 ### In the Xahau docs

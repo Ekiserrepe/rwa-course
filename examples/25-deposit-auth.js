@@ -24,17 +24,19 @@ async function main() {
   const bob = wallet("BOB_SEED");
 
   await submit(client, treasury, { TransactionType: "AccountSet", SetFlag: asfDepositAuth }, "treasury: DepositAuth on");
-  await submit(client, treasury, { TransactionType: "DepositPreauth", Authorize: alice.address }, "treasury: preauthorise alice");
+  try {
+    await submit(client, treasury, { TransactionType: "DepositPreauth", Authorize: alice.address }, "treasury: preauthorise alice");
 
-  const pay = (who, name) =>
-    submit(client, who, { TransactionType: "Payment", Destination: treasury.address, Amount: bond(1) }, `${name} -> treasury: 1 HBOND`);
-  await pay(alice, "alice");
-  await pay(bob, "bob");
-
-  // Clean up
-  await submit(client, treasury, { TransactionType: "DepositPreauth", Unauthorize: alice.address }, "treasury: remove preauth");
-  await submit(client, treasury, { TransactionType: "AccountSet", ClearFlag: asfDepositAuth }, "treasury: DepositAuth off");
-  await client.disconnect();
+    const pay = (who, name, expect) =>
+      submit(client, who, { TransactionType: "Payment", Destination: treasury.address, Amount: bond(1) }, `${name} -> treasury: 1 HBOND`, { expect });
+    await pay(alice, "alice");
+    await pay(bob, "bob", ["tecNO_PERMISSION"]); // the refusal this script demonstrates
+  } finally {
+    // Clean up, even after a failure: later lessons pay the treasury
+    await submit(client, treasury, { TransactionType: "DepositPreauth", Unauthorize: alice.address }, "treasury: remove preauth", { expect: ["tecNO_ENTRY"] });
+    await submit(client, treasury, { TransactionType: "AccountSet", ClearFlag: asfDepositAuth }, "treasury: DepositAuth off");
+    await client.disconnect();
+  }
 }
 
 main().catch((err) => {

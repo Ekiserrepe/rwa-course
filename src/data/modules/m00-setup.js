@@ -544,15 +544,20 @@ Run it again with an address at the end of each module and watch the ISSUER's ob
 
 - **toHex / fromHex**: domains, Remarks and long currency codes travel as uppercase hex.
 - **currencyCode / currencyName**: turn a token name into the ledger's currency field and back (Module 2 explains why \`HBOND\` becomes 40 hex characters).
-- **wallet(envName)**: loads a seed from \`.env\`, e.g. \`wallet("ISSUER_SEED")\`.
+- **wallet(envName)**: loads a seed from \`.env\`, e.g. \`wallet("ISSUER_SEED")\`. A seed records its own algorithm (an \`sEd…\` seed is ed25519, the faucet's \`s…\` seeds are secp256k1), but xahau.js's \`Wallet.fromSeed\` assumes ed25519 unless told otherwise, and the wrong algorithm derives a **different account** from the same seed. So the helper \`fromSeed\` reads the type with \`decodeSeed\` and passes it on.
+- **writeSecret(file, text)**: writes a file of seeds readable only by its owner (mode 600).
+- **dec(value) / tokenValue(value, rounding)**: exact decimal arithmetic for money. In JavaScript \`1.15 * 100\` is \`114.99999999999999\`, and \`3 * 1.002\` has more digits than a token amount may carry (15 significant digits). \`dec("1.15").times(100)\` is exactly 115; \`tokenValue\` rounds to what the ledger accepts, **down** by default, **up** when you pass \`ROUND_UP\` (for a \`SendMax\`).
 - **bond(value) / usd(value)**: the course's two currencies as amount objects. \`bond(10)\` is \`{ currency: "48424F4E44…", issuer: <ISSUER>, value: "10" }\`.
-- **submit(client, signer, tx, label)**: autofills (Fee, Sequence, NetworkID, LastLedgerSequence), signs, submits and **waits for validation**. It prints ✔ or ✘ with the result code, plus any Hook messages.
+- **connect()**: opens the WebSocket, and refuses any network but testnet unless \`ALLOW_MAINNET=1\` is set ([Module 11](?m=11&l=0)).
+- **submit(client, signer, tx, label, options)**: autofills (Fee, Sequence, NetworkID, LastLedgerSequence), signs, submits and **waits for validation**. It prints ✔ or ✘ with the result code, plus any Hook messages.
 - **trustLine(client, account, issuer, currency)**: one trust line as \`account\` sees it, or \`null\`.
 - **getObject(client, id)**: reads any ledger object by ID, or \`null\` if it does not exist.
 
-### Why submit() does not throw on tec codes
+### How submit() reports a tec code
 
-A \`tec\` result (like \`tecNO_AUTH\`) means the transaction **was included in a ledger and charged a fee**, but did not do what you asked. Many lessons provoke those on purpose to show a control working, so the helper reports the code and lets the script decide.
+A \`tec\` result (like \`tecNO_AUTH\`) means the transaction **was included in a ledger and charged a fee**, but did not do what you asked. \`submit\` returns it without throwing, so the script can carry on (a cleanup step, a report), and sets the script's **exit code to 1**, so a shell or a CI job sees the failure.
+
+Many lessons provoke a refusal on purpose to show a control working. Those calls pass the code they expect, e.g. \`{ expect: ["tecNO_PERMISSION"] }\`: it still prints ✘, but doesn't count as a failure. The last option, \`onSigned\`, runs after signing and before sending, with the transaction's hash: Module 5's coupon run uses it to journal each payment.
 
 A \`tem\` or \`tef\` result means the transaction was **rejected before reaching a ledger**. \`submitAndWait\` throws in that case.
 

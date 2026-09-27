@@ -11,7 +11,7 @@
 //   node 21-transfer.js TREASURY ALICE 500
 //   node 21-transfer.js TREASURY BOB 300
 const { connect, wallet, BOND_CODE } = require("../lib/xahau");
-const { install, remove, u32, param } = require("./lib");
+const { install, remove, u32, param, accountBytes } = require("./lib");
 
 async function main() {
   const client = await connect();
@@ -20,9 +20,11 @@ async function main() {
     await remove(client, issuer, "remove holding_cap");
   } else {
     const max = Number(process.argv[2] ?? 500);
+    // Accounts that hold far more than any investor by design: never frozen
+    const exempt = ["TREASURY_SEED", "VAULT_SEED"].filter((k) => process.env[k]).map((k) => accountBytes(wallet(k).address));
     await install(client, issuer, "holding_cap", {
-      on: ["Payment", "OfferCreate"], // without OfferCreate, DEX trades never reach it
-      params: [param("TOK", BOND_CODE), param("MAX", u32(max))],
+      on: "all", // tokens move by many transaction types: the Hook reads the result, whatever the type
+      params: [param("TOK", BOND_CODE), param("MAX", u32(max)), param("EXEMPT", exempt.join(""))],
       collect: true, // the issuer is only a weak party to transfers between holders
     });
   }

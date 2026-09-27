@@ -35,9 +35,12 @@ async function main() {
   // Never lose earlier seeds silently: keep the previous file next to it
   if (fs.existsSync(ENV_FILE)) {
     fs.copyFileSync(ENV_FILE, `${ENV_FILE}.bak`);
+    fs.chmodSync(`${ENV_FILE}.bak`, 0o600);
     console.log("\nPrevious .env kept as .env.bak");
   }
-  fs.writeFileSync(ENV_FILE, lines.join("\n") + "\n");
+  // Seeds: readable by their owner only (mode 600)
+  fs.writeFileSync(ENV_FILE, lines.join("\n") + "\n", { mode: 0o600 });
+  fs.chmodSync(ENV_FILE, 0o600);
   console.log("\nSaved to .env (testnet funds only, 1,000 XAH each).");
 }
 

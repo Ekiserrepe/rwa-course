@@ -11,7 +11,7 @@
 const fs = require("fs");
 const path = require("path");
 const { Wallet, xahToDrops, hashes } = require("xahau");
-const { connect, submit, wallet, fromSeed, toHex, fromHex, currencyCode, trustLine, getObject, writeSecret, dec, tokenValue, ROUND_DOWN } = require("../lib/xahau");
+const { connect, submit, wallet, fromSeed, toHex, fromHex, currencyCode, trustLine, getObject, supply, writeSecret, dec, tokenValue, ROUND_DOWN } = require("../lib/xahau");
 const { install, remove, currencyBytes, accountBytes, u32, param } = require("../hooks/lib");
 
 const TERMS = JSON.parse(fs.readFileSync(path.join(__dirname, "term-sheet.json"), "utf8"));
@@ -171,8 +171,7 @@ const phases = {
   // Maturity: close the desk, open a funded redemption window, holders redeem, supply retired
   async maturity() {
     await remove(client, A.treasury, "close the subscription desk");
-    const gb = (await client.request({ command: "gateway_balances", account: A.issuer.address, hotwallet: [A.treasury.address], ledger_index: "validated" })).result;
-    const outstanding = dec(gb.obligations?.[CODE] ?? 0);
+    const { outside: outstanding } = await supply(client, A.issuer.address, CODE, [A.treasury.address]);
     const due = outstanding.times(TERMS.faceValueUSD);
     // The money raised bought the asset; at maturity the SPV sells it and the
     // buyer's bank wires the proceeds (here: STABLE pays the treasury directly)
@@ -191,8 +190,7 @@ const phases = {
 
   // What an auditor checks at the end, from the ledger alone
   async audit() {
-    const gb = (await client.request({ command: "gateway_balances", account: A.issuer.address, ledger_index: "validated" })).result;
-    expect(!gb.obligations || Object.keys(gb.obligations).length === 0, `no ${TERMS.token} left in existence`);
+    expect((await supply(client, A.issuer.address, CODE)).total.isZero(), `no ${TERMS.token} left in existence (frozen holdings included)`);
     for (const who of ["alice", "bob", "dave2"]) {
       console.log(`  ${who.padEnd(6)} ${await balance(who, tok(0))} ${TERMS.token}, ${await balance(who, usd(0))} USD`);
     }

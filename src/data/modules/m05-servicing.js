@@ -269,7 +269,7 @@ Three safeguards live in the scripts:
 
 - **Refuse to open an unfunded window.** \`44-redemption-window.js\` compares the principal due with the treasury's **unlocked** USD before posting: money sitting in an escrow (lesson 3) shows in the trust line's balance but can't pay anyone. (If it posted anyway, the DEX would simply skip the unfunded part and each holder's Fill or Kill would fail cleanly: nobody could lose, but the promise would be broken in public.)
 - **Fill or Kill on the holder's side**: all of their tokens at face value, or nothing.
-- **Retire the supply.** After the window, the treasury holds the redeemed tokens plus any it never sold. \`46-retire-supply.js\` pays them all to the issuer, which destroys them. \`gateway_balances\` then reports no obligations: the bond has provably ceased to exist.
+- **Retire the supply.** After the window, the treasury holds the redeemed tokens plus any it never sold. \`46-retire-supply.js\` pays them all to the issuer, which destroys them. \`gateway_balances\` then reports no obligations and no frozen balances: the bond has provably ceased to exist. (Check both: with a frozen holder left, \`obligations\` alone would already read zero. The window is sized with the frozen holdings too, since those holders are still owed principal, paid through the issuer as described below.)
 
 ### Frozen holders
 

@@ -230,15 +230,17 @@ The trust line's reserve (0.2 XAH) is paid by the account that created it with a
 { "command": "gateway_balances", "account": "<ISSUER>", "hotwallet": ["<TREASURY>"] }
 \`\`\`
 
-- \`obligations\`: tokens held by everyone **except** the hot wallets. For a bond, the part actually sold.
+- \`obligations\`: tokens held by everyone **except** the hot wallets **and except frozen lines**. For a bond, the part actually sold, as long as nobody is frozen.
 - \`balances\`: what each hot wallet holds. For a bond, the unsold part.
-- \`frozen_balances\`: amounts on frozen lines.
+- \`frozen_balances\`: amounts on frozen lines, per account. They are **left out** of \`obligations\`, so add them back for the true total: a frozen holder still holds the bond and is still owed principal. \`supply()\` in \`lib/xahau.js\` does exactly that, and every script that sizes a payout or checks the supply is zero uses it.
 
 After investors bought some HBOND ([Module 3](?m=3&l=0) onwards), the report read:
 
 \`\`\`
-HBOND outside the treasury: 800
+HBOND outside the treasury, not frozen: 800
 HBOND in the treasury:        9200
+HBOND outside the treasury: 800
+
 4 HBOND trust line(s):
   rhyAtsMkqfnzUJLzyof95Ms27DLYV1QYgW  HBOND  0  NOT authorised
   rDjqmYCaD6kh4dZxixbPCVuY3Kbi7EEcZd  HBOND  9200  authorised

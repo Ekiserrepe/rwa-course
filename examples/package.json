@@ -6,7 +6,8 @@
   "license": "MIT",
   "scripts": {
     "accounts": "node 01-create-accounts.js",
-    "verify": "node verify/run-all.mjs"
+    "verify": "node verify/run-all.mjs",
+    "verify:edge": "node verify/edge-cases.mjs"
   },
   "dependencies": {
     "bignumber.js": "^9.3.1",

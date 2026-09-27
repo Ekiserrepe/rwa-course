@@ -25,7 +25,7 @@
 //   node 33-subscribe.js ALICE 20
 //   node 33-subscribe.js BOB 30 100
 //   (and fund the TREASURY with the principal: the script says how much is missing)
-const { connect, wallet, submit, trustLine, bond, usd, dec, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, supply, bond, usd, dec, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
   const face = dec(process.argv[2] ?? 100);
@@ -33,9 +33,9 @@ async function main() {
   const treasury = wallet("TREASURY_SEED");
   const issuer = wallet("ISSUER_SEED").address;
 
-  const gb = (await client.request({ command: "gateway_balances", account: issuer, hotwallet: [treasury.address], ledger_index: "validated" })).result;
-  // Only HBOND: an issuer may have more than one token outstanding
-  const outstanding = dec(gb.obligations?.[BOND_CODE] ?? 0);
+  // Only HBOND (an issuer may have more than one token), frozen holdings included:
+  // a frozen holder is still owed principal, even if paid another way (Module 5)
+  const { outside: outstanding } = await supply(client, issuer, BOND_CODE, [treasury.address]);
   // Escrowed USD (a coupon reserve) is part of the balance but can't be spent
   const line = await trustLine(client, treasury.address, usd(0).issuer, "USD");
   const cash = dec(line?.balance ?? 0).minus(line?.locked_balance ?? 0);

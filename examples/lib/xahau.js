@@ -133,6 +133,31 @@ async function trustLine(client, account, issuer, currency) {
   return res.result.lines.find((l) => l.currency === currency) ?? null;
 }
 
+/**
+ * How much of a token exists, from gateway_balances: `outside` the hot
+ * wallets (investors) and `inHotwallets` (the treasury). Balances on FROZEN
+ * lines are not in `obligations`: the node lists them apart, in
+ * `frozen_balances`, so they are added back here. Forgetting them sizes a
+ * redemption too small, or declares a supply retired while frozen holders
+ * still hold tokens.
+ */
+async function supply(client, issuer, currency, hotwallets = []) {
+  const gb = (await client.request({ command: "gateway_balances", account: issuer, hotwallet: hotwallets, ledger_index: "validated" })).result;
+  let outside = dec(gb.obligations?.[currency] ?? 0);
+  let inHotwallets = dec(0);
+  for (const amounts of Object.values(gb.balances ?? {})) {
+    for (const a of amounts) if (a.currency === currency) inHotwallets = inHotwallets.plus(a.value);
+  }
+  for (const [account, amounts] of Object.entries(gb.frozen_balances ?? {})) {
+    for (const a of amounts) {
+      if (a.currency !== currency) continue;
+      if (hotwallets.includes(account)) inHotwallets = inHotwallets.plus(a.value);
+      else outside = outside.plus(a.value);
+    }
+  }
+  return { outside, inHotwallets, total: outside.plus(inHotwallets) };
+}
+
 /** Read any ledger object by its ID, or null when it does not exist. */
 async function getObject(client, id) {
   try {
@@ -147,5 +172,5 @@ async function getObject(client, id) {
 module.exports = {
   EXAMPLES_DIR, ENV_FILE, NETWORK, toHex, fromHex, currencyCode, currencyName, fromSeed, wallet,
   writeSecret, dec, tokenValue, ROUND_DOWN, ROUND_UP,
-  BOND_CODE, bond, usd, connect, submit, trustLine, getObject,
+  BOND_CODE, bond, usd, connect, submit, trustLine, getObject, supply,
 };

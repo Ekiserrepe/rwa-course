@@ -53,6 +53,7 @@ Run the scripts in lesson order. Each one's header lists what must run before it
 | `capstone/run.js` · `capstone/term-sheet.json` | 10 | the whole bond, eleven checked phases |
 | `90-preflight.js` | 11 | read-only launch check of an issuer, and of the amendments the course relies on |
 | `verify/run-all.mjs` | all | `npm run verify`: runs everything on testnet and checks each result |
+| `verify/edge-cases.mjs` | all | `npm run verify:edge`, right after `npm run verify`: forces the failure paths (coupon payments in flight, racing subscriptions, failed deliveries and refunds, every way out of the vault, resting bids, frozen holders at maturity) |
 
 Typical order (what `npm run verify` does):
 

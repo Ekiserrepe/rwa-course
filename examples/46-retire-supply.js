@@ -18,7 +18,7 @@
 //   node 44-redemption-window.js
 //   node 45-redeem.js ALICE
 //   node 45-redeem.js BOB
-const { connect, wallet, submit, trustLine, bond, toHex, dec, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, submit, trustLine, supply, bond, toHex, dec, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
   const client = await connect();
@@ -34,8 +34,8 @@ async function main() {
       Memos: [{ Memo: { MemoType: toHex("retire"), MemoData: toHex("maturity") } }],
     }, `retire ${held} HBOND`);
   }
-  const gb = (await client.request({ command: "gateway_balances", account: issuer, ledger_index: "validated" })).result;
-  console.log(`  HBOND in existence: ${gb.obligations?.[BOND_CODE] ?? 0}`);
+  // Frozen holdings count too: they are not in gateway_balances' obligations
+  console.log(`  HBOND in existence: ${(await supply(client, issuer, BOND_CODE)).total}`);
   await client.disconnect();
 }
 

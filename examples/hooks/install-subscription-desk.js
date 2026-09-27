@@ -1,10 +1,12 @@
 // install-subscription-desk.js: put the always-open issuance desk on the TREASURY
 //   node hooks/install-subscription-desk.js [priceUSD=100]
-//   node hooks/install-subscription-desk.js --remove
+//   node hooks/install-subscription-desk.js --remove [--clear-state]
 //
-// The desk keeps its reservations and pending deliveries in its Hook state.
-// --remove refuses while any are still there: without the Hook, a delivery
-// that fails could no longer be refunded. Wait a few ledgers and try again.
+// The desk keeps its reservations, pending deliveries and any refund it could
+// not make in its Hook state. --remove refuses while anything is there:
+// without the Hook, a delivery that fails could no longer be refunded. Wait a
+// few ledgers and try again. If what is left is a debt (a refund that failed),
+// pay it by hand first, then remove with --clear-state, which deletes the state.
 //
 // Run first, once, in this order (from examples/, after 01-create-accounts.js):
 //   node 10-issuer-setup.js
@@ -13,7 +15,7 @@
 //   node 30-stablecoin-setup.js
 const crypto = require("crypto");
 const { connect, wallet, BOND_CODE } = require("../lib/xahau");
-const { install, remove, currencyBytes, accountBytes, u32, param } = require("./lib");
+const { install, remove, clearState, currencyBytes, accountBytes, u32, param } = require("./lib");
 
 async function main() {
   const client = await connect();
@@ -23,7 +25,12 @@ async function main() {
     const { namespace_entries: pending = [] } = (await client.request({
       command: "account_namespace", account: treasury.address, namespace_id, ledger_index: "validated",
     }).catch(() => ({ result: {} }))).result;
-    if (pending.length > 0) throw new Error(`${pending.length} subscription(s) still settling in the desk's state: try again in a few seconds`);
+    if (pending.length > 0) {
+      if (!process.argv.includes("--clear-state")) {
+        throw new Error(`${pending.length} entr(ies) still settling in the desk's state: try again in a few seconds, or settle any debt and use --clear-state`);
+      }
+      await clearState(client, treasury, "subscription_desk");
+    }
     await remove(client, treasury, "remove subscription_desk");
   } else {
     const price = Number(process.argv[2] ?? 100);

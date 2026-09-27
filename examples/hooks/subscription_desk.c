@@ -24,7 +24,8 @@
  *      If even the refund fails, the amount owed is recorded in the Hook's
  *      state under the investor's account, for the operations team.
  *
- * XAH payments and the treasury's own outgoing transactions pass untouched.
+ * XAH payments, payments of the asset token itself (the issuer restocking the
+ * treasury) and the treasury's own outgoing transactions pass untouched.
  *
  * Install-time parameters (HookParameters):
  *   USD   40 bytes: stablecoin currency code (20) + its issuer's account ID (20)
@@ -179,6 +180,13 @@ int64_t hook(uint32_t reserved)
     if (price <= 0)
         REJECT("Desk: PRICE must be above zero.");
 
+    // The asset token itself coming in (the issuer restocking the treasury,
+    // a holder returning tokens) is not a subscription: let it through
+    int is_tok = 0;
+    BUFFER_EQUAL(is_tok, amount + 8, tok, 40);
+    if (is_tok)
+        OK("Desk: token received (restock or return), not a subscription.");
+
     // ── 1. Only the configured stablecoin ───────────────────────────────────
     int is_usd = 0;
     BUFFER_EQUAL(is_usd, amount + 8, usd, 40);
@@ -252,13 +260,18 @@ int64_t hook(uint32_t reserved)
     if (util_keylet(SBUF(tl_kl), KEYLET_LINE, SBUF(hook_acc), tok_issuer, 20, tok, 20) != 34 ||
         slot_set(SBUF(tl_kl), 8) != 8 || slot_subfield(8, sfBalance, 9) != 9 || slot_subfield(8, sfFlags, 10) != 10)
         REJECT("Desk: the treasury holds no tokens.");
+    // This line's sides are the issuer and the TREASURY: compare those two,
+    // not the issuer and the investor
+    int t_cmp = 0;
+    ACCOUNT_COMPARE(t_cmp, tok_issuer, hook_acc);
+    int issuer_low_t = t_cmp < 0;
     uint8_t tf[4];
     slot(SBUF(tf), 10);
-    if (UINT32_FROM_BUF(tf) & (issuer_low ? lsfLowFreeze : lsfHighFreeze))
+    if (UINT32_FROM_BUF(tf) & (issuer_low_t ? lsfLowFreeze : lsfHighFreeze))
         REJECT("Desk: the treasury's own line is frozen.");
     int64_t balance = slot_float(9);
     // RippleState balances are stored from the low account's side
-    if (issuer_low)
+    if (issuer_low_t)
         balance = float_negate(balance);
     uint8_t res_key[8] = {'R', 'E', 'S', 'E', 'R', 'V', 'E', 'D'};
     int64_t promised = state_xfl(SBUF(res_key));

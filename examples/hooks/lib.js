@@ -50,4 +50,12 @@ async function install(client, account, name, { on, params = [], collect = false
 const remove = (client, account, label = "remove hook") =>
   submit(client, account, { TransactionType: "SetHook", Hooks: [{ Hook: { CreateCode: "", Flags: hsfOverride } }] }, label);
 
-module.exports = { install, remove, currencyBytes, accountBytes, u32, param };
+/** Delete every state entry a Hook keeps in its namespace (the Hook itself stays installed). */
+const hsfNSDelete = 2;
+const clearState = (client, account, name, label = `clear ${name} state`) =>
+  submit(client, account, {
+    TransactionType: "SetHook",
+    Hooks: [{ Hook: { HookNamespace: crypto.createHash("sha256").update(name).digest("hex").toUpperCase(), Flags: hsfNSDelete } }],
+  }, label);
+
+module.exports = { install, remove, clearState, currencyBytes, accountBytes, u32, param };

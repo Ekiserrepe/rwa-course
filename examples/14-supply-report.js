@@ -2,14 +2,15 @@
 //   node 14-supply-report.js
 //
 // gateway_balances answers from the issuer's side: "obligations" is the
-// supply in circulation. Naming the treasury as a hotwallet separates what
-// the issuer's own team holds from what investors hold.
+// supply in circulation, EXCEPT balances on frozen lines, which it lists
+// apart as "frozen_balances". Naming the treasury as a hotwallet separates
+// what the issuer's own team holds from what investors hold.
 //
 // Run first, once, in this order (from examples/, after 01-create-accounts.js):
 //   node 10-issuer-setup.js
 //   node 12-treasury-line.js
 //   node 13-issue-supply.js
-const { connect, wallet, currencyName, BOND_CODE } = require("./lib/xahau");
+const { connect, wallet, currencyName, supply, BOND_CODE } = require("./lib/xahau");
 
 async function main() {
   const client = await connect();
@@ -21,12 +22,14 @@ async function main() {
   })).result;
 
   for (const [code, total] of Object.entries(gb.obligations ?? {})) {
-    console.log(`${currencyName(code)} outside the treasury: ${total}`);
+    console.log(`${currencyName(code)} outside the treasury, not frozen: ${total}`);
   }
   for (const [, amounts] of Object.entries(gb.balances ?? {})) {
     for (const a of amounts) console.log(`${currencyName(a.currency)} in the treasury:        ${a.value}`);
   }
   if (gb.frozen_balances) console.log("Frozen:", JSON.stringify(gb.frozen_balances));
+  const { outside } = await supply(client, issuer, BOND_CODE, [treasury]);
+  console.log(`HBOND outside the treasury: ${outside}`);
 
   // The per-holder view: every trust line the issuer is part of
   const lines = (await client.request({ command: "account_lines", account: issuer, ledger_index: "validated" })).result.lines

@@ -5,3 +5,4 @@ snapshot.json
 capstone/accounts.json
 verify/last-run.log
 coupon-journal.json
+verify/edge-run.log

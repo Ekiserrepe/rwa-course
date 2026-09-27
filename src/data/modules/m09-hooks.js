@@ -115,7 +115,7 @@ The treasury is the destination of the investor's payment, so its Hook is a **st
 4. **The token can move**: the issuer hasn't frozen it globally and charges no transfer fee (a fee would need a \`SendMax\` the simple delivery doesn't carry).
 5. **The treasury has enough HBOND left**, counting only stock not already promised to earlier subscriptions whose delivery is still on its way.
 
-Then it **emits** a payment of \`USD ÷ PRICE\` HBOND back to the sender. XAH payments and the treasury's own transactions (including that emitted payment, which triggers the Hook again) pass untouched.
+Then it **emits** a payment of \`USD ÷ PRICE\` HBOND back to the sender. XAH payments, payments of HBOND itself (the issuer restocking the treasury, a holder returning tokens) and the treasury's own transactions (including that emitted payment, which triggers the Hook again) pass untouched.
 
 ### Reserving stock, and the callback
 
@@ -164,6 +164,8 @@ The emitted payment is a **separate transaction**, validated a ledger or two lat
 ### Removing the desk
 
 The callback runs only while the Hook is installed. \`install-subscription-desk.js --remove\` therefore refuses while the Hook's state still holds anything (\`account_namespace\` lists it): a reservation or a pending delivery means a refund might still be needed. Wait a few ledgers and remove it then.
+
+What never settles on its own is a **debt**: a refund that failed, recorded under the investor's account. The operations team pays it by hand, then removes the desk with \`--remove --clear-state\`, which first deletes the Hook's state (\`SetHook\` with \`hsfNSDelete\` and the Hook's namespace).
 
 ### Parameters, not constants
 
